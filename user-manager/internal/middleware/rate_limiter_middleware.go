@@ -38,11 +38,11 @@ func getRateLimitter(ip string) *rate.Limiter {
 			Lastseen: time.Now(),
 		}
 		clients[ip] = newclient
-		log.Printf("a client[%s]-{limiter: %v, lastseen: %v} is created", ip, newclient.Limiter, newclient.Lastseen)
+		// log.Printf("a client[%s]-{limiter: %v, lastseen: %v} is created", ip, newclient.Limiter, newclient.Lastseen)
 		return newclient.Limiter
 	} else {
 		// Cập nhật thời gian cuối cùng thấy client
-		log.Printf("a client[%s]-{limiter: %v, lastseen: %v} is created", ip, client.Limiter, client.Lastseen)
+		// log.Printf("a client[%s]-{limiter: %v, lastseen: %v} is created", ip, client.Limiter, client.Lastseen)
 		client.Lastseen = time.Now()
 
 		return client.Limiter

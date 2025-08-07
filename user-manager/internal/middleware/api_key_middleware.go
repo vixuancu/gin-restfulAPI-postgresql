@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"github.com/gin-gonic/gin"
-	"log"
+	
 	"net/http"
 	"os"
 )
@@ -14,7 +14,7 @@ func APIKeyMiddleware() gin.HandlerFunc {
 	}
 	return func(c *gin.Context) {
 		apikey := c.GetHeader("X-API-KEY")
-		log.Println("Apikey:", apikey)
+		// log.Println("Apikey:", apikey)
 		if apikey == "" {
 			//AbortWithStatusJSON Abort: Dừng middleware hoặc handler hiện tại, không chạy tiếp các handler phía sau nữa.
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
