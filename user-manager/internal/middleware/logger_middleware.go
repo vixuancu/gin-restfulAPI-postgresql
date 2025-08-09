@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/rs/zerolog"
-	"gopkg.in/natefinch/lumberjack.v2"
 	"io"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
 )
 
 type CustomResponseWriter struct {
@@ -23,19 +23,9 @@ func (w *CustomResponseWriter) Write(data []byte) (n int, err error) {
 	return w.ResponseWriter.Write(data)
 }
 
-func LoggerMiddleware() gin.HandlerFunc {
+func LoggerMiddleware(httpLogger *zerolog.Logger) gin.HandlerFunc {
 	// nơi chứa log request
-	logPath := "../../internal/logs/http.log"
 
-	// Tạo logger với zerolog
-	logger := zerolog.New(&lumberjack.Logger{
-		Filename:   logPath,
-		MaxSize:    1, // megabytes
-		MaxBackups: 5,
-		MaxAge:     5,    //
-		Compress:   true, // disabled by default
-		LocalTime:  true, //
-	}).With().Timestamp().Logger()
 	return func(c *gin.Context) {
 		start := time.Now()
 		// Đọc toàn bộ body của request để ghi log
@@ -72,7 +62,7 @@ func LoggerMiddleware() gin.HandlerFunc {
 			//application/json  application/x-www-form-urlencoded
 			bodyBytes, err := io.ReadAll(c.Request.Body)
 			if err != nil {
-				logger.Error().Err(err).Msg("Failed to read request body") // Ghi log lỗi nếu không đọc được body
+				httpLogger.Error().Err(err).Msg("Failed to read request body") // Ghi log lỗi nếu không đọc được body
 				c.AbortWithStatusJSON(500, gin.H{"error": "Internal Server Error"})
 				return
 			}
@@ -116,14 +106,14 @@ func LoggerMiddleware() gin.HandlerFunc {
 		} else {
 			responseBodyParsed = responseBodyRaw
 		}
-		logEvent := logger.Info() // Mặc định ghi log ở mức Info
+		logEvent := httpLogger.Info() // Mặc định ghi log ở mức Info
 		if statusCode >= 500 {
 			// Nếu mã trạng thái là 500 trở lên, ghi log ở mức Error
-			logEvent = logger.WithLevel(zerolog.ErrorLevel)
+			logEvent = httpLogger.WithLevel(zerolog.ErrorLevel)
 		} else if statusCode >= 400 {
 			// Nếu mã trạng thái là 400 trở lên, ghi log ở mức Warn
-			logEvent = logger.WithLevel(zerolog.WarnLevel)
-		} 
+			logEvent = httpLogger.WithLevel(zerolog.WarnLevel)
+		}
 
 		logEvent.
 			Str("method", c.Request.Method).                  // Ghi phương thức HTTP(GET, POST, PUT, DELETE, v.v.)

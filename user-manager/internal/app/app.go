@@ -26,6 +26,7 @@ type Application struct {
 }
 
 func NewApplication(cfg *config.Config) *Application {
+	
 	r := gin.Default()
 	loadEnv()
 	if err := validation.InitValidator(); err != nil {

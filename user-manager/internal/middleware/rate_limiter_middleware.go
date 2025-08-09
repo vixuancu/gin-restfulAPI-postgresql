@@ -1,12 +1,13 @@
 package middleware
 
 import (
-	"github.com/gin-gonic/gin"
-	"golang.org/x/time/rate"
-	"log"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog"
+	"golang.org/x/time/rate"
 )
 
 type Client struct {
@@ -64,7 +65,7 @@ func CleanupClients() {
 }
 
 // test:ab -n 20 -c 1 -H "X-API-KEY:87f2f6bd-8095-44d4-9295-547136178207" http://localhost:8080/api/v1/category/golang
-func RateLimitMiddleware() gin.HandlerFunc {
+func RateLimitMiddleware(rateLimiterLogger *zerolog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// dùng ip xác đinh người dùng
 		ip := getClientIP(c)
