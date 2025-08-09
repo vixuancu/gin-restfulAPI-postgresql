@@ -9,9 +9,9 @@ import (
 
 func APIKeyMiddleware() gin.HandlerFunc {
 	expectedKey := os.Getenv("API_KEY")
-	if expectedKey == "" {
-		expectedKey = "default_api_key" //
-	}
+	// if expectedKey == "" {
+	// 	expectedKey = "default_api_key" //
+	// }
 	return func(c *gin.Context) {
 		apikey := c.GetHeader("X-API-KEY")
 		// log.Println("Apikey:", apikey)

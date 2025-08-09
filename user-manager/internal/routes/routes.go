@@ -18,9 +18,15 @@ func RegisterRoutes(router *gin.Engine, routes ...Routes) {
 
 	httpLogger := NewLoggerWithPath("../../internal/logs/http.log", "info")
 	recoveryLogger := NewLoggerWithPath("../../internal/logs/recovery.log", "warning")
-	rateLimiterLogger := NewLoggerWithPath("../../internal/logs/recovery.log", "warning")
+	rateLimiterLogger := NewLoggerWithPath("../../internal/logs/rate_limiter.log", "warning")
 
-	router.Use(middleware.RateLimitMiddleware(rateLimiterLogger), middleware.LoggerMiddleware(httpLogger), middleware.RecoveryMiddleware(recoveryLogger), middleware.APIKeyMiddleware(), middleware.AuthMiddleware())
+	router.Use(
+		middleware.APIKeyMiddleware(),
+		middleware.RateLimitMiddleware(rateLimiterLogger),
+		middleware.LoggerMiddleware(httpLogger),
+		middleware.RecoveryMiddleware(recoveryLogger),
+		middleware.AuthMiddleware(),
+	)
 	v1api := router.Group("/api/v1")
 	for _, r := range routes {
 		r.Register(v1api)
