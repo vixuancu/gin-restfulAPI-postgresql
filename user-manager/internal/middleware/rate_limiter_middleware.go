@@ -80,7 +80,7 @@ func RateLimitMiddleware(rateLimiterLogger *zerolog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// dùng ip xác đinh người dùng
 		ip := getClientIP(c)
-		//log.Println("ip:", ip) //::1 <=> 127.0.0.1
+		//log.Println("ip:", ip) //::1 <=> 127.0.0.1 tesst
 		limiter := getRateLimitter(ip)
 		if !limiter.Allow() {
 			if shoudLogRateLimit(ip) {
