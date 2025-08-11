@@ -75,7 +75,7 @@ func CleanupClients() {
 	}
 }
 
-// test:ab -n 20 -c 1 -H "X-API-KEY:87f2f6bd-8095-44d4-9295-547136178207" http://localhost:8080/api/v1/users/
+// test:ab -n 20 -c 1 -H "X-API-KEY:87f2f6bd-8095-44d4-9295-547136178207" http://localhost:8080/api/v1/users
 func RateLimitMiddleware(rateLimiterLogger *zerolog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// dùng ip xác đinh người dùng
