@@ -1,6 +1,11 @@
--- name: GetUser :one
-select * from users where uuid = $1;
-
-
 -- name: CreateUser :one
-insert into users (name, email) values ($1, $2) returning *;
+INSERT INTO users (
+    user_email,
+    user_password,
+    user_fullname,
+    user_age,
+    user_status,
+    user_level
+) VALUES (
+    $1, $2, $3, $4, $5, $6
+) RETURNING *;

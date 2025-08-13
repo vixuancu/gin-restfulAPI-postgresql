@@ -1,31 +1,46 @@
 package repository
 
+import (
+	"context"
+	"log"
+	"user-management-api/internal/db/sqlc"
+)
+
 
 
 type SqlUserRepository struct {
+	db sqlc.Querier
 }
 
 // constructor function to create a new UserRepository instance //làm một hàm khởi tạo để tạo một instance mới của UserRepository
-func NewSqlUserRepository() UserRepository {
-	return &SqlUserRepository{}
+func NewSqlUserRepository(db sqlc.Querier) UserRepository {
+	return &SqlUserRepository{
+		db: db,
+	}
 }
-func (repo *SqlUserRepository) FindAll()  {
+func (ur *SqlUserRepository) FindAll()  {
 	
 }
-func (repo *SqlUserRepository) Create()  {
+func (ur *SqlUserRepository) Create(ctx context.Context, userParams sqlc.CreateUserParams) (sqlc.User, error)  {
+	log.Printf("%+v", userParams) // %+v → in giá trị mặc định + tên trường (struct)
+	log.Printf("%+v", ur.db) // in giá trị mặc định + tên trường (struct)
+	user,err:=ur.db.CreateUser(ctx, userParams)
+	if err != nil {
+		return sqlc.User{}, err
+	}
+	return user, nil
+}
+func (ur *SqlUserRepository) FindByUUID(uuid string) {
+	
+	
+}
+func (ur *SqlUserRepository) Update(uuid string)  {
+	
+}
+func (ur *SqlUserRepository) Delete(uuid string)  {
+	
 
 }
-func (repo *SqlUserRepository) FindByUUID(uuid string) {
-	
-	
-}
-func (repo *SqlUserRepository) Update(uuid string)  {
-	
-}
-func (repo *SqlUserRepository) Delete(uuid string)  {
-	
-
-}
-func (repo *SqlUserRepository) FindByEmail(email string) {
+func (ur *SqlUserRepository) FindByEmail(email string) {
 	
 }

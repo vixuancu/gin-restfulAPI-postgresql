@@ -27,13 +27,15 @@ type AppError struct {
 func (ae *AppError) Error() string {
 	return ""
 }
-
+// sử dụng khi : validation lỗi, không tìm thấy dữ liệu, lỗi máy chủ nội bộ, không có quyền truy cập, xung đột dữ liệu
 func NewError(message string, code ErrorCode) error {
 	return &AppError{
 		Message: message,
 		Code:    code,
 	}
 }
+
+// sử dụng khi : lỗi từ database, lỗi từ service bên ngoài
 func WrapError(err error, message string, code ErrorCode) error {
 	return &AppError{
 		Err:     err,
@@ -41,6 +43,7 @@ func WrapError(err error, message string, code ErrorCode) error {
 		Code:    code,
 	}
 }
+// ResponseError phân tích lỗi và trả về mã trạng thái HTTP tương ứng (trong handler)
 func ResponseError(c *gin.Context, err error) {
 	if appErr, ok := err.(*AppError); ok {
 		status :=  httpStatusFromCode(appErr.Code)

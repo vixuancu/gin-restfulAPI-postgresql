@@ -2,9 +2,7 @@ package v1handler
 
 import (
 	"fmt"
-	"log"
 	"net/http"
-	"time"
 	v1dto "user-management-api/internal/dto/v1"
 	v1services "user-management-api/internal/services/v1"
 	"user-management-api/internal/utils"
@@ -52,11 +50,20 @@ func (uh *UserHandler) CreateUsers(c *gin.Context) {
 		utils.ResponseValidator(c, validation.HandleValidationError(err))
 		return
 	}
-	log.Println("Start processing")
-	time.Sleep(10 * time.Second) // Giả lập thời gian xử lý lâu
-	log.Println("End processing")
 
-	utils.ResponSuccess(c, http.StatusCreated, "")
+	user := input.MapCreateInputToModel()
+
+	createdUser,err := uh.userService.CreateUser(c, user)
+	if err != nil {
+		utils.ResponseError(c, err)
+		return // dừng func ở đây không nó chạy xuống success
+	}
+	dtoUser := v1dto.MapUserToDTO(createdUser)
+	// log.Println("Start processing")
+	// time.Sleep(10 * time.Second) // Giả lập thời gian xử lý lâu
+	// log.Println("End processing")
+
+	utils.ResponSuccess(c, http.StatusCreated, dtoUser)
 
 }
 func (uh *UserHandler) GetUserByUUID(c *gin.Context) {
