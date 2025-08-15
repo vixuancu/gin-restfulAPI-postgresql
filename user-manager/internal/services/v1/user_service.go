@@ -1,6 +1,7 @@
 package v1services
 
 import (
+	"database/sql"
 	"errors"
 	"user-management-api/internal/db/sqlc"
 	"user-management-api/internal/repository"
@@ -46,8 +47,25 @@ func (us *userService) CreateUser(ctx *gin.Context, input sqlc.CreateUserParams)
 func (us *userService) GetUserByUUID(uuid string) {
 
 }
-func (us *userService) UpdateUser(uuid string) {
+func (us *userService) UpdateUser(ctx *gin.Context, input sqlc.UpdateUserParams) (sqlc.User, error) {
+	context := ctx.Request.Context() // Lấy context của go từ gin.Context
 
+	if input.UserPassword != nil && *input.UserPassword != "" {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(*input.UserPassword), bcrypt.DefaultCost) // Mã hóa mật khẩu
+	if err != nil {
+		return sqlc.User{}, utils.WrapError(err, "failed to hash Password", utils.ErrorCodeInternalServer)
+	}
+	hashed := string(hashedPassword)
+	input.UserPassword = &hashed // Cập nhật mật khẩu đã mã hóa vào user 
+	}
+	updatedUser,err:= us.userRepo.Update(context, input) // Cập nhật thông tin người dùng
+	if err != nil {
+		if errors.Is(err,sql.ErrNoRows) {
+			return sqlc.User{}, utils.NewError("user not found", utils.ErrorCodeNotFound)
+		}
+		return sqlc.User{}, utils.WrapError(err, "failed to update user", utils.ErrorCodeInternalServer)
+	}
+	return updatedUser, nil
 }
 func (us *userService) DeleteUser(uuid string) {
 

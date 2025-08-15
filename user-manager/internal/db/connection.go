@@ -23,16 +23,14 @@ func InitDB() error {
 	if err != nil {
 		return fmt.Errorf("failed to parse database connection string: %v", err)
 	}
-	sqlLogger:=utils.NewLoggerWithPath("../../internal/logs/sql.log", "info")
-
-
+	sqlLogger := utils.NewLoggerWithPath("../../internal/logs/sql.log", "info")
 
 	conf.ConnConfig.Tracer = &tracelog.TraceLog{
-		Logger   :&pgx.PgxZeroLogTracer{
-			Logger: 	  *sqlLogger,
+		Logger: &pgx.PgxZeroLogTracer{
+			Logger:         *sqlLogger,
 			SlowQueryLimit: 500 * time.Millisecond, // Thời gian chậm để ghi log
-		}  ,
-		LogLevel :tracelog.LogLevelDebug, // Mức độ ghi log
+		},
+		LogLevel: tracelog.LogLevelDebug, // Mức độ ghi log
 	}
 
 	conf.MaxConns = 50                       // Set maximum number of connections to the database

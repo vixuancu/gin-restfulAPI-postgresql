@@ -85,3 +85,6 @@ sql:
           # ==== UUID ====
           - db_type: "uuid"
             go_type: "github.com/google/uuid.UUID"
+          # Hoặc override theo column cụ thể
+          - column: "users.user_uuid"
+            go_type: "github.com/google/uuid.UUID"

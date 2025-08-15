@@ -34,8 +34,12 @@ func (ur *SqlUserRepository) FindByUUID(uuid string) {
 	
 	
 }
-func (ur *SqlUserRepository) Update(uuid string)  {
-	
+func (ur *SqlUserRepository) Update(ctx context.Context, input sqlc.UpdateUserParams) (sqlc.User, error)  {
+		user,err :=ur.db.UpdateUser(ctx, input) // Cập nhật thông tin người dùng
+		if err != nil {
+			return sqlc.User{}, err
+		}
+		return user, nil
 }
 func (ur *SqlUserRepository) Delete(uuid string)  {
 	

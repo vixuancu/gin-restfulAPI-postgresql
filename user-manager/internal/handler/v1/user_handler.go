@@ -9,6 +9,7 @@ import (
 	"user-management-api/internal/validation"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type UserHandler struct {
@@ -81,14 +82,27 @@ func (uh *UserHandler) UpdateUser(c *gin.Context) {
 		utils.ResponseValidator(c, validation.HandleValidationError(err))
 		return
 	}
+	userUuid,err := uuid.Parse(param.UUID) 
+	if err != nil {
+		utils.ResponseError(c, fmt.Errorf("invalid UUID format: %v", err))
+		return
+	}
+
 	var inputUpdate v1dto.UpdateUserInput
 	if err := c.ShouldBindJSON(&inputUpdate); err != nil {
 
 		utils.ResponseValidator(c, validation.HandleValidationError(err))
 		return
 	}
+	user := inputUpdate.MapUpdateToModel(userUuid)
 
-	utils.ResponSuccess(c, http.StatusOK, "")
+	updatedUser,err := uh.userService.UpdateUser(c, user)
+	if err != nil {
+		utils.ResponseError(c, err)	 // Trả về lỗi nếu có
+		return // dừng func ở đây không nó chạy xuống ResponSuccess 
+	}
+	userDto := v1dto.MapUserToDTO(updatedUser) // Chuyển đổi sang DTO để trả về
+	utils.ResponSuccess(c, http.StatusOK, userDto)
 }
 func (uh *UserHandler) DeleteUser(c *gin.Context) {
 	var param GetUserByUUIDParam

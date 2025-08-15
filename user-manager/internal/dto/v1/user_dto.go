@@ -3,6 +3,8 @@ package v1dto
 import (
 	"user-management-api/internal/db/sqlc"
 	"user-management-api/internal/utils"
+
+	"github.com/google/uuid"
 )
 
 type UserDTO struct {
@@ -18,17 +20,16 @@ type CreateUserInput struct {
 	Name     string `json:"name" binding:"required"`
 	Email    string `json:"email" binding:"required,email,email_advanced"`
 	Password string `json:"password" binding:"required,password_strong"`
-	Age      int    `json:"age" binding:"omitempty,gt=0,lte=120"`
-	Status   int    `json:"status" binding:"required,oneof=1 2 3"`
-	Level    int    `json:"level" binding:"required,oneof=1 2 3"`
+	Age      int32    `json:"age" binding:"omitempty,gt=0,lte=120"`
+	Status   int32    `json:"status" binding:"required,oneof=1 2 3"`
+	Level    int32    `json:"level" binding:"required,oneof=1 2 3"`
 }
 type UpdateUserInput struct {
-	Name     string `json:"name" binding:"required"`
-	Email    string `json:"email" binding:"required,email,email_advanced"`
-	Password string `json:"password" binding:"omitempty,password_strong"`
-	Age      int    `json:"age" binding:"omitempty,gt=0,lte=120"`
-	Status   int    `json:"status" binding:"required,oneof=1 2"`
-	Level    int    `json:"level" binding:"required,oneof=1 2"`
+	Name     *string `json:"name" binding:"omitempty"`
+	Password *string `json:"password" binding:"omitempty,password_strong"`
+	Age      *int32    `json:"age" binding:"omitempty,gt=0,lte=120"`
+	Status   *int32    `json:"status" binding:"omitempty,oneof=1 2 3"`
+	Level    *int32    `json:"level" binding:"omitempty,oneof=1 2 3"`
 }
 
 func (input *CreateUserInput) MapCreateInputToModel() sqlc.CreateUserParams {
@@ -37,18 +38,26 @@ func (input *CreateUserInput) MapCreateInputToModel() sqlc.CreateUserParams {
 		UserPassword: input.Password,
 		UserFullname: input.Name,
 		UserAge:      utils.ConvertToInt32Pointer(input.Age),
-		UserStatus:   int32(input.Status),
-		UserLevel:    int32(input.Level),
+		UserStatus:   input.Status,
+		UserLevel:    input.Level,
 	}
 
 }
-func (input *UpdateUserInput) MapUpdateToModel() {
+func (input *UpdateUserInput) MapUpdateToModel(userUuid uuid.UUID) sqlc.UpdateUserParams {
+	return sqlc.UpdateUserParams{
+		UserPassword: input.Password,
+		UserFullname: input.Name,
+		UserAge:      input.Age,
+		UserStatus:   input.Status,
+		UserLevel:    input.Level,
+		UserUuid:     userUuid,
+	}
 
 }
 
 func MapUserToDTO(user sqlc.User) *UserDTO {
 	dto := &UserDTO{
-		UUID:      user.Uuid.String(), // .String() vì uuid có method String() để chuyển đổi thành string
+		UUID:      user.UserUuid.String(), // .String() vì uuid có method String() để chuyển đổi thành string
 		Name:      user.UserFullname,
 		Email:     user.UserEmail,
 		Status:    mapStatusText(int(user.UserStatus)),

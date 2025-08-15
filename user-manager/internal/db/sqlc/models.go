@@ -13,7 +13,7 @@ import (
 
 type User struct {
 	UserID       int32     `json:"user_id"`
-	Uuid         uuid.UUID `json:"uuid"`
+	UserUuid     uuid.UUID `json:"user_uuid"`
 	UserEmail    string    `json:"user_email"`
 	UserPassword string    `json:"user_password"`
 	UserFullname string    `json:"user_fullname"`
