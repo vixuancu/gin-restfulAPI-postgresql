@@ -8,6 +8,7 @@ import (
 	"user-management-api/internal/utils"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -67,6 +68,37 @@ func (us *userService) UpdateUser(ctx *gin.Context, input sqlc.UpdateUserParams)
 	}
 	return updatedUser, nil
 }
-func (us *userService) DeleteUser(uuid string) {
+func (us *userService) DeleteUser(ctx *gin.Context, uuid uuid.UUID)  error {
+context := ctx.Request.Context() // Lấy context của go từ gin.Context
+_,err:= us.userRepo.Delete(context, uuid) 
+	if err != nil {
+		if errors.Is(err,sql.ErrNoRows) {
+			return  utils.NewError("user not found", utils.ErrorCodeNotFound)
+		}
+		return  utils.WrapError(err, "failed to Delete user", utils.ErrorCodeInternalServer)
+	}
+	return  nil
+}
+func (us *userService) SoftDeleteUser(ctx *gin.Context, uuid uuid.UUID) (sqlc.User, error) {
+context := ctx.Request.Context() // Lấy context của go từ gin.Context
+softDeletedUser,err:= us.userRepo.SoftDelete(context, uuid) 
+	if err != nil {
+		if errors.Is(err,sql.ErrNoRows) {
+			return sqlc.User{}, utils.NewError("user not found", utils.ErrorCodeNotFound)
+		}
+		return sqlc.User{}, utils.WrapError(err, "failed to softDelete user", utils.ErrorCodeInternalServer)
+	}
+	return softDeletedUser, nil
 
+}
+func (us *userService) RestoreUser(ctx *gin.Context, uuid uuid.UUID) (sqlc.User, error) {
+context := ctx.Request.Context() // Lấy context của go từ gin.Context
+restoreUser,err:= us.userRepo.Restore(context, uuid) 
+	if err != nil {
+		if errors.Is(err,sql.ErrNoRows) {
+			return sqlc.User{}, utils.NewError("user not found", utils.ErrorCodeNotFound)
+		}
+		return sqlc.User{}, utils.WrapError(err, "failed to Restore user", utils.ErrorCodeInternalServer)
+	}
+	return restoreUser, nil
 }

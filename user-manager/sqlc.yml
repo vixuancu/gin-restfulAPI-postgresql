@@ -13,6 +13,16 @@ sql:
         emit_empty_slices: true
         emit_pointers_for_null_types: true
         overrides:
+            # ==== UUID ====
+          - db_type: "uuid"
+            go_type: 
+              import: "github.com/google/uuid"
+              type: "UUID"
+          - db_type: "uuid"
+            nullable: true
+            go_type:
+              import: "github.com/google/uuid"
+              type: "UUID"
           # ==== Textual types (non-nullable & nullable) ====
           - db_type: "text"
             go_type: "string"
@@ -82,9 +92,4 @@ sql:
           - db_type: "jsonb"
             go_type: "encoding/json.RawMessage"
 
-          # ==== UUID ====
-          - db_type: "uuid"
-            go_type: "github.com/google/uuid.UUID"
-          # Hoặc override theo column cụ thể
-          - column: "users.user_uuid"
-            go_type: "github.com/google/uuid.UUID"
+        

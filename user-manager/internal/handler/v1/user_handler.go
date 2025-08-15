@@ -54,7 +54,7 @@ func (uh *UserHandler) CreateUsers(c *gin.Context) {
 
 	user := input.MapCreateInputToModel()
 
-	createdUser,err := uh.userService.CreateUser(c, user)
+	createdUser, err := uh.userService.CreateUser(c, user)
 	if err != nil {
 		utils.ResponseError(c, err)
 		return // dừng func ở đây không nó chạy xuống success
@@ -64,7 +64,7 @@ func (uh *UserHandler) CreateUsers(c *gin.Context) {
 	// time.Sleep(10 * time.Second) // Giả lập thời gian xử lý lâu
 	// log.Println("End processing")
 
-	utils.ResponSuccess(c, http.StatusCreated, dtoUser)
+	utils.ResponSuccess(c, http.StatusCreated,"User Create successfully", dtoUser)
 
 }
 func (uh *UserHandler) GetUserByUUID(c *gin.Context) {
@@ -82,7 +82,7 @@ func (uh *UserHandler) UpdateUser(c *gin.Context) {
 		utils.ResponseValidator(c, validation.HandleValidationError(err))
 		return
 	}
-	userUuid,err := uuid.Parse(param.UUID) 
+	userUuid, err := uuid.Parse(param.UUID)
 	if err != nil {
 		utils.ResponseError(c, fmt.Errorf("invalid UUID format: %v", err))
 		return
@@ -96,13 +96,53 @@ func (uh *UserHandler) UpdateUser(c *gin.Context) {
 	}
 	user := inputUpdate.MapUpdateToModel(userUuid)
 
-	updatedUser,err := uh.userService.UpdateUser(c, user)
+	updatedUser, err := uh.userService.UpdateUser(c, user)
 	if err != nil {
-		utils.ResponseError(c, err)	 // Trả về lỗi nếu có
-		return // dừng func ở đây không nó chạy xuống ResponSuccess 
+		utils.ResponseError(c, err) // Trả về lỗi nếu có
+		return                      // dừng func ở đây không nó chạy xuống ResponSuccess
 	}
 	userDto := v1dto.MapUserToDTO(updatedUser) // Chuyển đổi sang DTO để trả về
-	utils.ResponSuccess(c, http.StatusOK, userDto)
+	utils.ResponSuccess(c, http.StatusOK,"Updated user successfully" ,userDto)
+}
+
+// xoa mem
+func (uh *UserHandler) SoftDeleteUser(c *gin.Context) {
+	var param GetUserByUUIDParam
+	if err := c.ShouldBindUri(&param); err != nil {
+		utils.ResponseValidator(c, validation.HandleValidationError(err))
+		return
+	}
+	userUuid, err := uuid.Parse(param.UUID)
+	if err != nil {
+		utils.ResponseError(c, fmt.Errorf("invalid UUID format: %v", err))
+		return
+	}
+	softDeleteUser, err := uh.userService.SoftDeleteUser(c, userUuid)
+	if err != nil {
+		utils.ResponseError(c, err) // Trả về lỗi nếu có
+		return                      // dừng func ở đây không nó chạy xuống ResponSuccess
+	}
+	userDto := v1dto.MapUserToDTO(softDeleteUser)  // Chuyển đổi sang DTO để trả về
+	utils.ResponSuccess(c, http.StatusOK, "User Deleted Successfully",userDto) // Trả về 204 No Content khi xóa thành công
+}
+func (uh *UserHandler) RestoreUser(c *gin.Context) {
+	var param GetUserByUUIDParam
+	if err := c.ShouldBindUri(&param); err != nil {
+		utils.ResponseValidator(c, validation.HandleValidationError(err))
+		return
+	}
+	userUuid, err := uuid.Parse(param.UUID)
+	if err != nil {
+		utils.ResponseError(c, fmt.Errorf("invalid UUID format: %v", err))
+		return
+	}
+	restoreUser, err := uh.userService.RestoreUser(c, userUuid)
+	if err != nil {
+		utils.ResponseError(c, err) // Trả về lỗi nếu có
+		return                      // dừng func ở đây không nó chạy xuống ResponSuccess
+	}
+	userDto := v1dto.MapUserToDTO(restoreUser)     // Chuyển đổi sang DTO để trả về
+	utils.ResponSuccess(c, http.StatusOK, "restore user Successfully", userDto) // Trả về 204 No Content khi xóa thành công
 }
 func (uh *UserHandler) DeleteUser(c *gin.Context) {
 	var param GetUserByUUIDParam
@@ -110,11 +150,20 @@ func (uh *UserHandler) DeleteUser(c *gin.Context) {
 		utils.ResponseValidator(c, validation.HandleValidationError(err))
 		return
 	}
-
+	userUuid, err := uuid.Parse(param.UUID)
+	if err != nil {
+		utils.ResponseError(c, fmt.Errorf("invalid UUID format: %v", err))
+		return
+	}
+	err = uh.userService.DeleteUser(c, userUuid) // Xóa người dùng
+	if err != nil {
+		utils.ResponseError(c, err) // Trả về lỗi nếu có
+		return                      // dừng func ở đây không nó chạy xuống ResponSuccess
+	}
 	utils.ResponseStatusCode(c, http.StatusNoContent) // Trả về 204 No Content khi xóa thành công
 }
 
 func (uh *UserHandler) PanicUser(c *gin.Context) {
-	var a []int
-	fmt.Println(a[1]) // Gây panic để kiểm tra middleware recovery
+	// var a []int
+	// fmt.Println(a[1]) // Gây panic để kiểm tra middleware recovery
 }

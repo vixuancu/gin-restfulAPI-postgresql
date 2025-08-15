@@ -13,3 +13,10 @@ func ConvertToInt32Pointer(value int32) *int32 {
 	
 	return &value
 }
+//
+func CapitalizeFirst(s string) string {
+	if len(s) == 0 {
+		return s
+	}
+	return strings.ToUpper(s[:1]) + s[1:] // Chuyển chữ cái đầu tiên thành chữ hoa
+}

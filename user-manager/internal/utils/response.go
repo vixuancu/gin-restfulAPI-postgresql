@@ -23,10 +23,16 @@ type AppError struct {
 	Code    ErrorCode
 	Err     error
 }
+type APIResponse struct {
+	Status  string `json:"status"`
+	Message string `json:"message,omitempty"`
+	Data    any    `json:"data,omitempty"`
+}
 
 func (ae *AppError) Error() string {
 	return ""
 }
+
 // sử dụng khi : validation lỗi, không tìm thấy dữ liệu, lỗi máy chủ nội bộ, không có quyền truy cập, xung đột dữ liệu
 func NewError(message string, code ErrorCode) error {
 	return &AppError{
@@ -43,12 +49,13 @@ func WrapError(err error, message string, code ErrorCode) error {
 		Code:    code,
 	}
 }
+
 // ResponseError phân tích lỗi và trả về mã trạng thái HTTP tương ứng (trong handler)
 func ResponseError(c *gin.Context, err error) {
 	if appErr, ok := err.(*AppError); ok {
-		status :=  httpStatusFromCode(appErr.Code)
+		status := httpStatusFromCode(appErr.Code)
 		response := gin.H{
-			"error": appErr.Message,
+			"error": CapitalizeFirst(appErr.Message),
 			"code":  appErr.Code,
 		}
 		if appErr.Err != nil {
@@ -63,13 +70,18 @@ func ResponseError(c *gin.Context, err error) {
 	})
 
 }
-func ResponSuccess(c *gin.Context,status int, data any) {
-	c.JSON(status, gin.H{
-		"status": "success",
-		"data": data,
-	})
+func ResponSuccess(c *gin.Context, status int, message string, data ...any) {
+	response := APIResponse{
+		Status:  "success",
+		Message: CapitalizeFirst(message),
+	}
+	if len(data) > 0 && data[0] != nil {
+		response.Data = data[0]
+
+	}
+	c.JSON(status, response)
 }
-func ResponseStatusCode(c *gin.Context,status int) {
+func ResponseStatusCode(c *gin.Context, status int) {
 	c.Status(status)
 }
 func ResponseValidator(c *gin.Context, data any) {
