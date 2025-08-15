@@ -2,6 +2,7 @@ package logger
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"os"
@@ -10,7 +11,10 @@ import (
 	"github.com/rs/zerolog"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
-
+type contextKey string
+const (
+	TraceIDKey contextKey = "trace_id"
+)
 type LoggerConfig struct {
 	Level      string
 	Filename   string
@@ -62,4 +66,11 @@ func (w *PrettyJSONWriter) Write(p []byte) (n int, err error) {
 		return w.Writer.Write(p) // Nếu không thể định dạng, ghi log gốc
 	}
 	return w.Writer.Write(prettyJSON.Bytes())
+}
+
+func GetTraceID (ctx context.Context) string{
+	if traceID, ok := ctx.Value(TraceIDKey).(string); ok {
+		return traceID
+	}
+	return ""
 }

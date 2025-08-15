@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"user-management-api/pkg/logger"
 
 	"github.com/jackc/pgx/v5/tracelog"
 	"github.com/rs/zerolog"
@@ -22,18 +23,19 @@ type QueryInfo struct {
 	CleanSQL      string
 	OriginalSQL   string
 }
+
 var (
 	sqlcNameRegex = regexp.MustCompile(`-- name:\s*(\w+)\s*:(\w+)`)
 	spaceRegex    = regexp.MustCompile(`\s+`)
 	commentRegex  = regexp.MustCompile(`-- [^\r\n]*`)
 )
 
-func parseSql(sql string) QueryInfo{
+func parseSql(sql string) QueryInfo {
 	info := QueryInfo{
 		OriginalSQL: sql,
 	}
 
-	if mathes := sqlcNameRegex.FindStringSubmatch(sql) ;len(mathes) == 3 { 
+	if mathes := sqlcNameRegex.FindStringSubmatch(sql); len(mathes) == 3 {
 		info.QueryName = mathes[1]
 		info.OperationType = strings.ToUpper(mathes[2])
 	}
@@ -45,7 +47,7 @@ func parseSql(sql string) QueryInfo{
 	return info
 }
 func formatArg(arg any) string {
-	val :=reflect.ValueOf(arg) // Lấy giá trị của arg
+	val := reflect.ValueOf(arg) // Lấy giá trị của arg
 
 	if arg == nil || (val.Kind() == reflect.Ptr && val.IsNil()) {
 		return "NULL" // Trả về NULL nếu arg là nil hoặc con trỏ nil
@@ -75,6 +77,7 @@ func formatArg(arg any) string {
 		return fmt.Sprintf("'%s'", strings.ReplaceAll(fmt.Sprintf("%v", v), "'", "''"))
 	}
 }
+
 // hafm này dùng để thay thế các placeholder trong câu lệnh SQL với các giá trị thực tế
 func replacePlaceholders(sql string, args []any) string {
 	for i, arg := range args {
@@ -91,7 +94,6 @@ func (t *PgxZeroLogTracer) Log(ctx context.Context, level tracelog.LogLevel, msg
 	args, _ := data["args"].([]any)
 	duration, _ := data["time"].(time.Duration)
 
-
 	queryInfo := parseSql(sql)
 
 	var finalSQL string
@@ -102,6 +104,7 @@ func (t *PgxZeroLogTracer) Log(ctx context.Context, level tracelog.LogLevel, msg
 	}
 
 	baseLogger := t.Logger.With().
+		Str("trace_id", logger.GetTraceID(ctx)).
 		Dur("duration", duration).
 		Str("sql_orginal", queryInfo.OriginalSQL).
 		Str("sql", finalSQL).

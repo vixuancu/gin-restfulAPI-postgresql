@@ -19,8 +19,9 @@ func RegisterRoutes(router *gin.Engine, routes ...Routes) {
 	rateLimiterLogger := utils.NewLoggerWithPath("../../internal/logs/rate_limiter.log", "warning")
 
 	router.Use(
-		middleware.APIKeyMiddleware(),
 		middleware.RateLimitMiddleware(rateLimiterLogger),
+		middleware.APIKeyMiddleware(),
+		middleware.TraceMiddleware(),
 		middleware.LoggerMiddleware(httpLogger),
 		middleware.RecoveryMiddleware(recoveryLogger),
 		middleware.AuthMiddleware(),

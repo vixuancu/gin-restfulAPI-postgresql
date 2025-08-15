@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"user-management-api/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
@@ -116,18 +117,19 @@ func LoggerMiddleware(httpLogger *zerolog.Logger) gin.HandlerFunc {
 		}
 
 		logEvent.
-			Str("method", c.Request.Method).                  // Ghi phương thức HTTP(GET, POST, PUT, DELETE, v.v.)
-			Str("path", c.Request.URL.Path).                  // Ghi đường dẫn của request(ví dụ: /api/v1/users)
-			Str("query", c.Request.URL.RawQuery).             // Ghi query string nếu có (ví dụ: ?page=1&limit=10)
-			Str("client_ip", c.ClientIP()).                   // Ghi địa chỉ IP của client
-			Str("user_agent", c.Request.UserAgent()).         // Ghi user agent của client (trình duyệt, ứng dụng, v.v.)
-			Str("referer", c.Request.Referer()).              // Ghi referer nếu có (trang trước đó mà client đã truy cập)
-			Str("protocol", c.Request.Proto).                 // Ghi giao thức HTTP (HTTP/1.1, HTTP/2, v.v.)
-			Str("host", c.Request.Host).                      // Ghi host của request (ví dụ: example.com)
-			Str("remote_address", c.Request.RemoteAddr).      // nếu địa chỉ IP của client không được cung cấp bởi c.ClientIP()
-			Str("request_uri", c.Request.RequestURI).         // Ghi toàn bộ URI của request (bao gồm query string)
-			Int64("content_length", c.Request.ContentLength). // Ghi độ dài của nội dung request  (nếu có)
-			Interface("headers", c.Request.Header).           // Ghi tất cả các header của request
+			Str("trace_id", logger.GetTraceID(c.Request.Context())). // Ghi trace ID nếu có
+			Str("method", c.Request.Method).                         // Ghi phương thức HTTP(GET, POST, PUT, DELETE, v.v.)
+			Str("path", c.Request.URL.Path).                         // Ghi đường dẫn của request(ví dụ: /api/v1/users)
+			Str("query", c.Request.URL.RawQuery).                    // Ghi query string nếu có (ví dụ: ?page=1&limit=10)
+			Str("client_ip", c.ClientIP()).                          // Ghi địa chỉ IP của client
+			Str("user_agent", c.Request.UserAgent()).                // Ghi user agent của client (trình duyệt, ứng dụng, v.v.)
+			Str("referer", c.Request.Referer()).                     // Ghi referer nếu có (trang trước đó mà client đã truy cập)
+			Str("protocol", c.Request.Proto).                        // Ghi giao thức HTTP (HTTP/1.1, HTTP/2, v.v.)
+			Str("host", c.Request.Host).                             // Ghi host của request (ví dụ: example.com)
+			Str("remote_address", c.Request.RemoteAddr).             // nếu địa chỉ IP của client không được cung cấp bởi c.ClientIP()
+			Str("request_uri", c.Request.RequestURI).                // Ghi toàn bộ URI của request (bao gồm query string)
+			Int64("content_length", c.Request.ContentLength).        // Ghi độ dài của nội dung request  (nếu có)
+			Interface("headers", c.Request.Header).                  // Ghi tất cả các header của request
 			Interface("request_body", requestBody).
 			Interface("response_body", responseBodyParsed).
 			Int("status_code", statusCode).                // Ghi mã trạng thái HTTP của response (ví dụ: 200, 404, 500, v.v.)
