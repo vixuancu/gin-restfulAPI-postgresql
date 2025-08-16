@@ -11,6 +11,25 @@ import (
 	"github.com/google/uuid"
 )
 
+const countUsers = `-- name: CountUsers :one
+SELECT COUNT(*)
+FROM users
+WHERE user_deleted_at IS NULL
+AND (
+    $1::TEXT IS NULL
+    OR $1::TEXT = ''
+    OR user_email ILIKE '%' || $1 || '%'
+    OR user_fullname ILIKE '%' || $1 || '%'
+)
+`
+
+func (q *Queries) CountUsers(ctx context.Context, search string) (int64, error) {
+	row := q.db.QueryRow(ctx, countUsers, search)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
     user_email,
@@ -57,6 +76,214 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.UserUpdatedAt,
 	)
 	return i, err
+}
+
+const listUsersCreateAtAsc = `-- name: ListUsersCreateAtAsc :many
+SELECT user_id, user_uuid, user_email, user_password, user_fullname, user_age, user_status, user_level, user_deleted_at, user_created_at, user_updated_at
+FROM users
+WHERE user_deleted_at IS NULL
+AND (
+    $3::TEXT IS NULL
+    OR $3::TEXT = ''
+    OR user_email ILIKE '%' || $3 || '%'
+    OR user_fullname ILIKE '%' || $3 || '%'
+)
+ORDER BY user_deleted_at ASC
+LIMIT $1 OFFSET $2
+`
+
+type ListUsersCreateAtAscParams struct {
+	Limit  int32  `json:"limit"`
+	Offset int32  `json:"offset"`
+	Search string `json:"search"`
+}
+
+func (q *Queries) ListUsersCreateAtAsc(ctx context.Context, arg ListUsersCreateAtAscParams) ([]User, error) {
+	rows, err := q.db.Query(ctx, listUsersCreateAtAsc, arg.Limit, arg.Offset, arg.Search)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []User{}
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.UserID,
+			&i.UserUuid,
+			&i.UserEmail,
+			&i.UserPassword,
+			&i.UserFullname,
+			&i.UserAge,
+			&i.UserStatus,
+			&i.UserLevel,
+			&i.UserDeletedAt,
+			&i.UserCreatedAt,
+			&i.UserUpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUsersCreateAtDesc = `-- name: ListUsersCreateAtDesc :many
+SELECT user_id, user_uuid, user_email, user_password, user_fullname, user_age, user_status, user_level, user_deleted_at, user_created_at, user_updated_at
+FROM users
+WHERE user_deleted_at IS NULL
+AND (
+    $3::TEXT IS NULL
+    OR $3::TEXT = ''
+    OR user_email ILIKE '%' || $3 || '%'
+    OR user_fullname ILIKE '%' || $3 || '%'
+)
+ORDER BY user_deleted_at DESC
+LIMIT $1 OFFSET $2
+`
+
+type ListUsersCreateAtDescParams struct {
+	Limit  int32  `json:"limit"`
+	Offset int32  `json:"offset"`
+	Search string `json:"search"`
+}
+
+func (q *Queries) ListUsersCreateAtDesc(ctx context.Context, arg ListUsersCreateAtDescParams) ([]User, error) {
+	rows, err := q.db.Query(ctx, listUsersCreateAtDesc, arg.Limit, arg.Offset, arg.Search)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []User{}
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.UserID,
+			&i.UserUuid,
+			&i.UserEmail,
+			&i.UserPassword,
+			&i.UserFullname,
+			&i.UserAge,
+			&i.UserStatus,
+			&i.UserLevel,
+			&i.UserDeletedAt,
+			&i.UserCreatedAt,
+			&i.UserUpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUsersIdAsc = `-- name: ListUsersIdAsc :many
+SELECT user_id, user_uuid, user_email, user_password, user_fullname, user_age, user_status, user_level, user_deleted_at, user_created_at, user_updated_at
+FROM users
+WHERE user_deleted_at IS NULL
+AND (
+    $3::TEXT IS NULL
+    OR $3::TEXT = ''
+    OR user_email ILIKE '%' || $3 || '%'
+    OR user_fullname ILIKE '%' || $3 || '%'
+)
+ORDER BY user_id ASC
+LIMIT $1 OFFSET $2
+`
+
+type ListUsersIdAscParams struct {
+	Limit  int32  `json:"limit"`
+	Offset int32  `json:"offset"`
+	Search string `json:"search"`
+}
+
+func (q *Queries) ListUsersIdAsc(ctx context.Context, arg ListUsersIdAscParams) ([]User, error) {
+	rows, err := q.db.Query(ctx, listUsersIdAsc, arg.Limit, arg.Offset, arg.Search)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []User{}
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.UserID,
+			&i.UserUuid,
+			&i.UserEmail,
+			&i.UserPassword,
+			&i.UserFullname,
+			&i.UserAge,
+			&i.UserStatus,
+			&i.UserLevel,
+			&i.UserDeletedAt,
+			&i.UserCreatedAt,
+			&i.UserUpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUsersIdDesc = `-- name: ListUsersIdDesc :many
+SELECT user_id, user_uuid, user_email, user_password, user_fullname, user_age, user_status, user_level, user_deleted_at, user_created_at, user_updated_at
+FROM users
+WHERE user_deleted_at IS NULL
+AND (
+    $3::TEXT IS NULL
+    OR $3::TEXT = ''
+    OR user_email ILIKE '%' || $3 || '%'
+    OR user_fullname ILIKE '%' || $3 || '%'
+)
+ORDER BY user_id DESC
+LIMIT $1 OFFSET $2
+`
+
+type ListUsersIdDescParams struct {
+	Limit  int32  `json:"limit"`
+	Offset int32  `json:"offset"`
+	Search string `json:"search"`
+}
+
+func (q *Queries) ListUsersIdDesc(ctx context.Context, arg ListUsersIdDescParams) ([]User, error) {
+	rows, err := q.db.Query(ctx, listUsersIdDesc, arg.Limit, arg.Offset, arg.Search)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []User{}
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.UserID,
+			&i.UserUuid,
+			&i.UserEmail,
+			&i.UserPassword,
+			&i.UserFullname,
+			&i.UserAge,
+			&i.UserStatus,
+			&i.UserLevel,
+			&i.UserDeletedAt,
+			&i.UserCreatedAt,
+			&i.UserUpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const restoreUser = `-- name: RestoreUser :one

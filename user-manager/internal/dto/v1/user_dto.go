@@ -11,25 +11,36 @@ type UserDTO struct {
 	UUID      string `json:"uuid"`
 	Name      string `json:"full_name"`
 	Email     string `json:"email_address"`
-	Age       *int    `json:"age"`
+	Age       *int   `json:"age"`
 	Status    string `json:"status"`
 	Level     string `json:"level"`
 	CreatedAt string `json:"created_at"`
+}
+
+type GetUserByUUIDParam struct {
+	UUID string `uri:"uuid" binding:"required,uuid"`
+}
+type GetUsersParams struct { // sử dụng query string để tìm kiếm
+	Search string `form:"search" binding:"omitempty,min=2,max=100,search"`
+	Page   int32    `form:"page" binding:"omitempty,min=1"`
+	Limit  int32    `form:"limit" binding:"omitempty,min=1,max=500"`
+	Order string `form:"order_by" binding:"omitempty,oneof=user_id user_created_at"`
+	Sort string `form:"sort" binding:"omitempty,oneof=asc desc"`
 }
 type CreateUserInput struct {
 	Name     string `json:"name" binding:"required"`
 	Email    string `json:"email" binding:"required,email,email_advanced"`
 	Password string `json:"password" binding:"required,password_strong"`
-	Age      int32    `json:"age" binding:"omitempty,gt=0,lte=120"`
-	Status   int32    `json:"status" binding:"required,oneof=1 2 3"`
-	Level    int32    `json:"level" binding:"required,oneof=1 2 3"`
+	Age      int32  `json:"age" binding:"omitempty,gt=0,lte=120"`
+	Status   int32  `json:"status" binding:"required,oneof=1 2 3"`
+	Level    int32  `json:"level" binding:"required,oneof=1 2 3"`
 }
 type UpdateUserInput struct {
 	Name     *string `json:"name" binding:"omitempty"`
 	Password *string `json:"password" binding:"omitempty,password_strong"`
-	Age      *int32    `json:"age" binding:"omitempty,gt=0,lte=120"`
-	Status   *int32    `json:"status" binding:"omitempty,oneof=1 2 3"`
-	Level    *int32    `json:"level" binding:"omitempty,oneof=1 2 3"`
+	Age      *int32  `json:"age" binding:"omitempty,gt=0,lte=120"`
+	Status   *int32  `json:"status" binding:"omitempty,oneof=1 2 3"`
+	Level    *int32  `json:"level" binding:"omitempty,oneof=1 2 3"`
 }
 
 func (input *CreateUserInput) MapCreateInputToModel() sqlc.CreateUserParams {
@@ -74,6 +85,14 @@ func MapUserToDTO(user sqlc.User) *UserDTO {
 	// 	dto.DeletedAt = "" // Nếu không có giá trị thì để trống
 	// }
 	return dto
+}
+func MapUsersToDTO(users []sqlc.User) []UserDTO {
+	dtoUsers := make([]UserDTO,0, len(users))
+	for _, user := range users {
+		// không nên dùng index gán giá trị trực tiếp vào slice vì nếu length = 0 thì sẽ panic
+		dtoUsers = append(dtoUsers, *MapUserToDTO(user)) 
+	}
+	return dtoUsers
 }
 
 func mapStatusText(status int) string {

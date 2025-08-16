@@ -15,14 +15,7 @@ import (
 type UserHandler struct {
 	userService v1services.UserService
 }
-type GetUserByUUIDParam struct {
-	UUID string `uri:"uuid" binding:"required,uuid"`
-}
-type GetUsersParams struct { // sử dụng query string để tìm kiếm
-	Search string `form:"search" binding:"omitempty,search"`
-	Page   int    `form:"page" binding:"omitempty,min=1"`
-	Limit  int    `form:"limit" binding:"omitempty,min=1,max=100"`
-}
+
 
 func NewUserHandler(service v1services.UserService) *UserHandler {
 	return &UserHandler{
@@ -30,19 +23,21 @@ func NewUserHandler(service v1services.UserService) *UserHandler {
 	}
 }
 func (uh *UserHandler) GetAllUsers(c *gin.Context) {
-	var params GetUsersParams
+	var params v1dto.GetUsersParams
 	if err := c.ShouldBindQuery(&params); err != nil {
 		utils.ResponseValidator(c, validation.HandleValidationError(err))
 		return
 	}
-	if params.Page < 1 {
-		params.Page = 1
+	
+	users,total, err := uh.userService.GetAllUsers(c,params.Search, params.Order, params.Sort , params.Limit, params.Page)
+	if err != nil {
+		utils.ResponseError(c, err)
+		return // dừng func ở đây không nó chạy xuống success
 	}
-	if params.Limit < 1 || params.Limit > 100 {
-		params.Limit = 10 // mặc định là 10
-	}
+	dtoUser := v1dto.MapUsersToDTO(users)
+	paginationRes := utils.NewPaginationResponse(dtoUser,params.Page, params.Limit, total)
 
-	utils.ResponSuccess(c, http.StatusOK, "")
+	utils.ResponSuccess(c, http.StatusOK,"Get All User successfully", paginationRes)
 }
 func (uh *UserHandler) CreateUsers(c *gin.Context) {
 	var input v1dto.CreateUserInput
@@ -68,7 +63,7 @@ func (uh *UserHandler) CreateUsers(c *gin.Context) {
 
 }
 func (uh *UserHandler) GetUserByUUID(c *gin.Context) {
-	var param GetUserByUUIDParam
+	var param v1dto.GetUserByUUIDParam
 	if err := c.ShouldBindUri(&param); err != nil {
 		utils.ResponseValidator(c, validation.HandleValidationError(err))
 		return
@@ -77,7 +72,7 @@ func (uh *UserHandler) GetUserByUUID(c *gin.Context) {
 	utils.ResponSuccess(c, http.StatusOK, "")
 }
 func (uh *UserHandler) UpdateUser(c *gin.Context) {
-	var param GetUserByUUIDParam
+	var param v1dto.GetUserByUUIDParam
 	if err := c.ShouldBindUri(&param); err != nil {
 		utils.ResponseValidator(c, validation.HandleValidationError(err))
 		return
@@ -107,7 +102,7 @@ func (uh *UserHandler) UpdateUser(c *gin.Context) {
 
 // xoa mem
 func (uh *UserHandler) SoftDeleteUser(c *gin.Context) {
-	var param GetUserByUUIDParam
+	var param v1dto.GetUserByUUIDParam
 	if err := c.ShouldBindUri(&param); err != nil {
 		utils.ResponseValidator(c, validation.HandleValidationError(err))
 		return
@@ -126,7 +121,7 @@ func (uh *UserHandler) SoftDeleteUser(c *gin.Context) {
 	utils.ResponSuccess(c, http.StatusOK, "User Deleted Successfully",userDto) // Trả về 204 No Content khi xóa thành công
 }
 func (uh *UserHandler) RestoreUser(c *gin.Context) {
-	var param GetUserByUUIDParam
+	var param v1dto.GetUserByUUIDParam
 	if err := c.ShouldBindUri(&param); err != nil {
 		utils.ResponseValidator(c, validation.HandleValidationError(err))
 		return
@@ -145,7 +140,7 @@ func (uh *UserHandler) RestoreUser(c *gin.Context) {
 	utils.ResponSuccess(c, http.StatusOK, "restore user Successfully", userDto) // Trả về 204 No Content khi xóa thành công
 }
 func (uh *UserHandler) DeleteUser(c *gin.Context) {
-	var param GetUserByUUIDParam
+	var param v1dto.GetUserByUUIDParam
 	if err := c.ShouldBindUri(&param); err != nil {
 		utils.ResponseValidator(c, validation.HandleValidationError(err))
 		return
@@ -164,6 +159,6 @@ func (uh *UserHandler) DeleteUser(c *gin.Context) {
 }
 
 func (uh *UserHandler) PanicUser(c *gin.Context) {
-	// var a []int
-	// fmt.Println(a[1]) // Gây panic để kiểm tra middleware recovery
+	var a []int
+	fmt.Println(a[1]) // Gây panic để kiểm tra middleware recovery
 }

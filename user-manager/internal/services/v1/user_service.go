@@ -3,6 +3,7 @@ package v1services
 import (
 	"database/sql"
 	"errors"
+	"strconv"
 	"user-management-api/internal/db/sqlc"
 	"user-management-api/internal/repository"
 	"user-management-api/internal/utils"
@@ -22,8 +23,37 @@ func NewUserService(repo repository.UserRepository) UserService {
 		userRepo: repo,
 	}
 }
-func (us *userService) GetAllUsers(search string, page int, limit int) {
+func (us *userService) GetAllUsers(ctx *gin.Context, search, orderBy, sort string, limit, page  int32) ([]sqlc.User,int32, error) {
+	context := ctx.Request.Context() // Lấy context của go từ gin.Context
 
+	if sort == "" {
+		sort = "asc" // Mặc định là sắp xếp tăng dần
+	}
+	if orderBy == "" {
+		orderBy = "user_created_at" // Mặc định là sắp xếp theo user
+	}
+	if page < 1 {
+		page = 1
+	}
+
+	if limit < 1 || limit >500 {
+		envLimit := utils.GetEnv("LIMIT_ITEM_ON_PER_PAGE", "10") // Lấy giá trị từ biến môi trường, nếu không có thì mặc định là 10
+		limitInt,err := strconv.Atoi(envLimit) // Chuyển đổi chuỗi sang số nguyên
+		if err != nil && limitInt < 1 {
+			limitInt = 10 // Nếu không thể chuyển đổi hoặc giá trị nhỏ hơn 1 thì mặc định là 10
+		}
+		limit = int32(limitInt) // Cập nhật giá trị limit
+	}
+	total, err := us.userRepo.CountUsers(context, search) // Đếm tổng số người dùng
+	if err != nil {
+		return []sqlc.User{},0, utils.WrapError(err, "failed to count users", utils.ErrorCodeInternalServer)
+	}
+	offset := (page -1) * limit // Tính toán offset dựa trên trang và giới hạn
+	users,err :=us.userRepo.GetAll(context, search, orderBy, sort, limit, offset) 
+	if err != nil {
+		return []sqlc.User{},0, utils.WrapError(err, "failed to get all users", utils.ErrorCodeInternalServer)
+	}
+	return users,int32(total), nil
 }
 func (us *userService) CreateUser(ctx *gin.Context, input sqlc.CreateUserParams) (sqlc.User, error) {
 	context := ctx.Request.Context() // Lấy context của go từ gin.Context
