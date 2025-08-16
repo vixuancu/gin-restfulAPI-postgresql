@@ -15,7 +15,7 @@ import (
 )
 
 var DB sqlc.Querier // đang sử dụng interface nên bỏ con trỏ
-
+var DBpool *pgxpool.Pool // Khởi tạo biến toàn cục cho pool kết nối
 func InitDB() error {
 	connStr := config.NewConfig().DNS()
 
@@ -42,7 +42,7 @@ func InitDB() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second) // set thoi gian timeout cho kết nối
 	defer cancel()
 
-	DBpool, err := pgxpool.NewWithConfig(ctx, conf)
+	DBpool, err = pgxpool.NewWithConfig(ctx, conf)
 	if err != nil {
 		return fmt.Errorf("failed to create database connection pool: %v", err)
 	}

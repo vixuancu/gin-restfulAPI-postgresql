@@ -24,9 +24,10 @@ type AppError struct {
 	Err     error
 }
 type APIResponse struct {
-	Status  string `json:"status"`
-	Message string `json:"message,omitempty"`
-	Data    any    `json:"data,omitempty"`
+	Status     string `json:"status"`
+	Message    string `json:"message,omitempty"`
+	Data       any    `json:"data,omitempty"`
+	Pagination any    `json:"pagination,omitempty"`
 }
 
 func (ae *AppError) Error() string {
@@ -76,7 +77,21 @@ func ResponSuccess(c *gin.Context, status int, message string, data ...any) {
 		Message: CapitalizeFirst(message),
 	}
 	if len(data) > 0 && data[0] != nil {
-		response.Data = data[0]
+		
+		if m,ok :=data[0].(map[string]any); ok { 
+			if p,exists := m["pagination"]; exists {
+				response.Pagination = p
+			}
+			if d,exists := m["data"]; exists {
+				response.Data = d
+			}else {
+				response.Data = m
+			}
+			
+		}else {
+			response.Data = data[0]
+		}
+		
 
 	}
 	c.JSON(status, response)

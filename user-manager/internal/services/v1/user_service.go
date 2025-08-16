@@ -49,7 +49,7 @@ func (us *userService) GetAllUsers(ctx *gin.Context, search, orderBy, sort strin
 		return []sqlc.User{},0, utils.WrapError(err, "failed to count users", utils.ErrorCodeInternalServer)
 	}
 	offset := (page -1) * limit // Tính toán offset dựa trên trang và giới hạn
-	users,err :=us.userRepo.GetAll(context, search, orderBy, sort, limit, offset) 
+	users,err :=us.userRepo.GetAllV2(context, search, orderBy, sort, limit, offset) 
 	if err != nil {
 		return []sqlc.User{},0, utils.WrapError(err, "failed to get all users", utils.ErrorCodeInternalServer)
 	}
