@@ -4,6 +4,7 @@ import (
 	"user-management-api/internal/middleware"
 	"user-management-api/internal/utils"
 
+	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 )
 
@@ -26,6 +27,7 @@ func RegisterRoutes(router *gin.Engine, routes ...Routes) {
 		middleware.TraceMiddleware(),
 		middleware.AuthMiddleware(),
 	)
+	router.Use(gzip.Gzip(gzip.DefaultCompression))
 	v1api := router.Group("/api/v1")
 	for _, r := range routes {
 		r.Register(v1api)
