@@ -29,7 +29,7 @@ func (uh *UserHandler) GetAllUsers(c *gin.Context) {
 		return
 	}
 	
-	users,total, err := uh.userService.GetAllUsers(c,params.Search, params.Order, params.Sort , params.Limit, params.Page)
+	users,total, err := uh.userService.GetAllUsers(c,params.Search, params.Order, params.Sort , params.Limit, params.Page,false)
 	if err != nil {
 		utils.ResponseError(c, err)
 		return // dừng func ở đây không nó chạy xuống success
@@ -68,8 +68,35 @@ func (uh *UserHandler) GetUserByUUID(c *gin.Context) {
 		utils.ResponseValidator(c, validation.HandleValidationError(err))
 		return
 	}
+	userUuid, err := uuid.Parse(param.UUID)
+	if err != nil {
+		utils.ResponseError(c, fmt.Errorf("invalid UUID format: %v", err))
+		return
+	}
+	user,err := uh.userService.GetUserByUUID(c,userUuid)
+	if err != nil {
+		utils.ResponseError(c, err) // Trả về lỗi nếu có
+		return // dừng func ở đây không nó chạy xuống ResponSuccess
+	}
+	userDto := v1dto.MapUserToDTO(user) // Chuyển đổi sang DTO
+	utils.ResponSuccess(c, http.StatusOK, "Get User By UUID successfully", userDto) 
+}
+func (uh *UserHandler) GetUserSoftDeleted(c *gin.Context) {
+var params v1dto.GetUsersParams
+	if err := c.ShouldBindQuery(&params); err != nil {
+		utils.ResponseValidator(c, validation.HandleValidationError(err))
+		return
+	}
+	
+	users,total, err := uh.userService.GetAllUsers(c,params.Search, params.Order, params.Sort , params.Limit, params.Page,true)
+	if err != nil {
+		utils.ResponseError(c, err)
+		return // dừng func ở đây không nó chạy xuống success
+	}
+	dtoUser := v1dto.MapUsersToDTO(users)
+	paginationRes := utils.NewPaginationResponse(dtoUser,params.Page, params.Limit, total)
 
-	utils.ResponSuccess(c, http.StatusOK, "")
+	utils.ResponSuccess(c, http.StatusOK,"Get All User soft Delete successfully", paginationRes)
 }
 func (uh *UserHandler) UpdateUser(c *gin.Context) {
 	var param v1dto.GetUserByUUIDParam

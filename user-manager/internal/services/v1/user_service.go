@@ -23,7 +23,7 @@ func NewUserService(repo repository.UserRepository) UserService {
 		userRepo: repo,
 	}
 }
-func (us *userService) GetAllUsers(ctx *gin.Context, search, orderBy, sort string, limit, page  int32) ([]sqlc.User,int32, error) {
+func (us *userService) GetAllUsers(ctx *gin.Context, search, orderBy, sort string, limit, page  int32,deleted bool) ([]sqlc.User,int32, error) {
 	context := ctx.Request.Context() // Lấy context của go từ gin.Context
 
 	if sort == "" {
@@ -44,12 +44,12 @@ func (us *userService) GetAllUsers(ctx *gin.Context, search, orderBy, sort strin
 		}
 		limit = int32(limitInt) // Cập nhật giá trị limit
 	}
-	total, err := us.userRepo.CountUsers(context, search) // Đếm tổng số người dùng
+	total, err := us.userRepo.CountUsers(context, search,deleted) // Đếm tổng số người dùng
 	if err != nil {
 		return []sqlc.User{},0, utils.WrapError(err, "failed to count users", utils.ErrorCodeInternalServer)
 	}
 	offset := (page -1) * limit // Tính toán offset dựa trên trang và giới hạn
-	users,err :=us.userRepo.GetAllV2(context, search, orderBy, sort, limit, offset) 
+	users,err :=us.userRepo.GetAllV2(context, search, orderBy, sort, limit, offset,deleted) 
 	if err != nil {
 		return []sqlc.User{},0, utils.WrapError(err, "failed to get all users", utils.ErrorCodeInternalServer)
 	}
@@ -75,7 +75,17 @@ func (us *userService) CreateUser(ctx *gin.Context, input sqlc.CreateUserParams)
 
 	return user, nil
 }
-func (us *userService) GetUserByUUID(uuid string) {
+func (us *userService) GetUserByUUID(c *gin.Context, uuid uuid.UUID) (sqlc.User, error) {
+	context := c.Request.Context() // Lấy context của go từ gin.Context
+
+	user, err := us.userRepo.GetByUuid(context, uuid)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return sqlc.User{}, utils.NewError("user not found", utils.ErrorCodeNotFound)
+		}
+		return sqlc.User{}, utils.WrapError(err, "failed to get user by UUID", utils.ErrorCodeInternalServer)
+	}
+	return user, nil
 
 }
 func (us *userService) UpdateUser(ctx *gin.Context, input sqlc.UpdateUserParams) (sqlc.User, error) {
