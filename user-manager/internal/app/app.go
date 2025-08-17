@@ -16,6 +16,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"github.com/redis/go-redis/v9"
 )
 
 type Module interface {
@@ -29,6 +30,7 @@ type Application struct {
 
 type ModuleContext struct {
 	DB sqlc.Querier
+	Redis *redis.Client
 }
 
 func NewApplication(cfg *config.Config) *Application {
@@ -41,8 +43,10 @@ func NewApplication(cfg *config.Config) *Application {
 	if err := db.InitDB(); err != nil {
 		log.Fatal("Failed to connect to database:", err)
 	}
+	redisClient := config.NewRedisClient()
 	ctx := &ModuleContext{
 		DB : db.DB,
+		Redis: redisClient,
 	}
 
 	modules := []Module{
