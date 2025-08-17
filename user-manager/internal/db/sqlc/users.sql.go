@@ -39,16 +39,16 @@ func (q *Queries) CountUsers(ctx context.Context, arg CountUsersParams) (int64, 
 }
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (
-    user_email,
-    user_password,
-    user_fullname,
-    user_age,
-    user_status,
-    user_level
-) VALUES (
-    $1, $2, $3, $4, $5, $6
-) RETURNING user_id, user_uuid, user_email, user_password, user_fullname, user_age, user_status, user_level, user_deleted_at, user_created_at, user_updated_at
+INSERT INTO
+    users (
+        user_email,
+        user_password,
+        user_fullname,
+        user_age,
+        user_status,
+        user_level
+    )
+VALUES ($1, $2, $3, $4, $5, $6) RETURNING user_id, user_uuid, user_email, user_password, user_fullname, user_age, user_status, user_level, user_deleted_at, user_created_at, user_updated_at
 `
 
 type CreateUserParams struct {
@@ -87,14 +87,42 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 }
 
 const getUser = `-- name: GetUser :one
-SELECT user_id, user_uuid, user_email, user_password, user_fullname, user_age, user_status, user_level, user_deleted_at, user_created_at, user_updated_at 
+SELECT user_id, user_uuid, user_email, user_password, user_fullname, user_age, user_status, user_level, user_deleted_at, user_created_at, user_updated_at
 FROM users
-WHERE user_uuid = $1
-AND user_deleted_at IS NULL
+WHERE
+    user_uuid = $1
+    AND user_deleted_at IS NULL
 `
 
 func (q *Queries) GetUser(ctx context.Context, userUuid uuid.UUID) (User, error) {
 	row := q.db.QueryRow(ctx, getUser, userUuid)
+	var i User
+	err := row.Scan(
+		&i.UserID,
+		&i.UserUuid,
+		&i.UserEmail,
+		&i.UserPassword,
+		&i.UserFullname,
+		&i.UserAge,
+		&i.UserStatus,
+		&i.UserLevel,
+		&i.UserDeletedAt,
+		&i.UserCreatedAt,
+		&i.UserUpdatedAt,
+	)
+	return i, err
+}
+
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT user_id, user_uuid, user_email, user_password, user_fullname, user_age, user_status, user_level, user_deleted_at, user_created_at, user_updated_at
+FROM users
+WHERE
+    user_email = $1
+    AND user_deleted_at IS NULL
+`
+
+func (q *Queries) GetUserByEmail(ctx context.Context, userEmail string) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByEmail, userEmail)
 	var i User
 	err := row.Scan(
 		&i.UserID,
@@ -408,15 +436,29 @@ func (q *Queries) TrashUser(ctx context.Context, userUuid uuid.UUID) (User, erro
 const updateUser = `-- name: UpdateUser :one
 UPDATE users
 SET
-    user_password = COALESCE($1, user_password),
-    user_fullname = COALESCE($2, user_fullname),
-    user_age = COALESCE($3, user_age),
-    user_status = COALESCE($4, user_status),
-    user_level = COALESCE($5, user_level)
+    user_password = COALESCE(
+        $1,
+        user_password
+    ),
+    user_fullname = COALESCE(
+        $2,
+        user_fullname
+    ),
+    user_age = COALESCE(
+        $3,
+        user_age
+    ),
+    user_status = COALESCE(
+        $4,
+        user_status
+    ),
+    user_level = COALESCE(
+        $5,
+        user_level
+    )
 WHERE
     user_uuid = $6
-    AND user_deleted_at IS NULL
-RETURNING user_id, user_uuid, user_email, user_password, user_fullname, user_age, user_status, user_level, user_deleted_at, user_created_at, user_updated_at
+    AND user_deleted_at IS NULL RETURNING user_id, user_uuid, user_email, user_password, user_fullname, user_age, user_status, user_level, user_deleted_at, user_created_at, user_updated_at
 `
 
 type UpdateUserParams struct {

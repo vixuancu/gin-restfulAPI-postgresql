@@ -8,14 +8,14 @@ import (
 )
 
 type UserRepository interface {
-	GetAll(ctx context.Context, search, orderBy, sort string, limit,offset int32) ([]sqlc.User, error)
-	GetAllV2(ctx context.Context, search, orderBy, sort string, limit, offset int32 ,deleted bool) ([]sqlc.User, error)
+	GetAll(ctx context.Context, search, orderBy, sort string, limit, offset int32) ([]sqlc.User, error)
+	GetAllV2(ctx context.Context, search, orderBy, sort string, limit, offset int32, deleted bool) ([]sqlc.User, error)
 	GetByUuid(ctx context.Context, uuid uuid.UUID) (sqlc.User, error)
-	CountUsers(ctx context.Context, search string ,deleted bool) (int64, error)
+	CountUsers(ctx context.Context, search string, deleted bool) (int64, error)
 	Create(ctx context.Context, input sqlc.CreateUserParams) (sqlc.User, error)
 	Update(ctx context.Context, input sqlc.UpdateUserParams) (sqlc.User, error)
 	Delete(ctx context.Context, uuid uuid.UUID) (sqlc.User, error)
 	Restore(ctx context.Context, uuid uuid.UUID) (sqlc.User, error)
 	SoftDelete(ctx context.Context, uuid uuid.UUID) (sqlc.User, error)
-	FindByEmail(email string)
+	GetByEmail(ctx context.Context, email string) (sqlc.User, error)
 }

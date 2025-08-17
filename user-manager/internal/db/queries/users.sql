@@ -1,27 +1,41 @@
 -- name: CreateUser :one
-INSERT INTO users (
-    user_email,
-    user_password,
-    user_fullname,
-    user_age,
-    user_status,
-    user_level
-) VALUES (
-    $1, $2, $3, $4, $5, $6
-) RETURNING *;
+INSERT INTO
+    users (
+        user_email,
+        user_password,
+        user_fullname,
+        user_age,
+        user_status,
+        user_level
+    )
+VALUES ($1, $2, $3, $4, $5, $6) RETURNING *;
 
 -- name: UpdateUser :one
 UPDATE users
 SET
-    user_password = COALESCE(sqlc.narg(user_password), user_password),
-    user_fullname = COALESCE(sqlc.narg(user_fullname), user_fullname),
-    user_age = COALESCE(sqlc.narg(user_age), user_age),
-    user_status = COALESCE(sqlc.narg(user_status), user_status),
-    user_level = COALESCE(sqlc.narg(user_level), user_level)
+    user_password = COALESCE(
+        sqlc.narg (user_password),
+        user_password
+    ),
+    user_fullname = COALESCE(
+        sqlc.narg (user_fullname),
+        user_fullname
+    ),
+    user_age = COALESCE(
+        sqlc.narg (user_age),
+        user_age
+    ),
+    user_status = COALESCE(
+        sqlc.narg (user_status),
+        user_status
+    ),
+    user_level = COALESCE(
+        sqlc.narg (user_level),
+        user_level
+    )
 WHERE
-    user_uuid = sqlc.narg(user_uuid)
-    AND user_deleted_at IS NULL
-RETURNING *;
+    user_uuid = sqlc.narg (user_uuid)
+    AND user_deleted_at IS NULL RETURNING *;
 
 -- name: SoftDeleteUser :one
 UPDATE users
@@ -114,11 +128,16 @@ AND (
 ORDER BY user_deleted_at DESC
 LIMIT $1 OFFSET $2;
 
-
 -- name: GetUser :one
-SELECT * 
+SELECT *
 FROM users
-WHERE user_uuid = $1
-AND user_deleted_at IS NULL;
+WHERE
+    user_uuid = $1
+    AND user_deleted_at IS NULL;
 
-
+-- name: GetUserByEmail :one
+SELECT *
+FROM users
+WHERE
+    user_email = $1
+    AND user_deleted_at IS NULL;

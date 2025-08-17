@@ -16,3 +16,7 @@ type UserService interface {
 	RestoreUser(c *gin.Context, uuid uuid.UUID) (sqlc.User, error)
 	DeleteUser(c *gin.Context, uuid uuid.UUID)  error
 }
+type AuthService interface {
+	Login(c *gin.Context,email,password string) error
+	Logout(c *gin.Context) error
+}
