@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test CORS</title>
+</head>
+
+<body>
+    <h1>Test CORS API</h1>
+    <script>
+        // http://localhost:8080/api/v1/users
+        //https://jsonplaceholder.typicode.com/comments
+
+        async function callApi() {
+            try {
+                const response = await fetch('http://localhost:8080/api/v1/users', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-KEY': '87f2f6bd-8095-44d4-9295-547136178207',
+                    }
+                });
+                const data = await response.json();
+                console.log('API Response:', data);
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        callApi();
+    </script>
+</body>
+
+</html>

@@ -21,6 +21,7 @@ func RegisterRoutes(router *gin.Engine, routes ...Routes) {
 
 	router.Use(
 		middleware.RecoveryMiddleware(recoveryLogger),
+		middleware.CORSMiddleware(),
 		middleware.LoggerMiddleware(httpLogger),
 		middleware.APIKeyMiddleware(),
 		middleware.RateLimitMiddleware(rateLimiterLogger),
@@ -32,4 +33,11 @@ func RegisterRoutes(router *gin.Engine, routes ...Routes) {
 	for _, r := range routes {
 		r.Register(v1api)
 	}
+	// Đăng ký các route không tìm thấy
+	router.NoRoute(func(c *gin.Context) {
+		c.JSON(404, gin.H{
+			"error": "Not Found",
+			"path":  c.Request.URL.Path,
+		})
+	})
 }
