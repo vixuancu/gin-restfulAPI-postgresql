@@ -27,7 +27,7 @@ func (ah *AuthHandler) Login(c *gin.Context) {
 		utils.ResponseValidator(c, validation.HandleValidationError(err))
 		return
 	}
-	 accesstoken,expiresIn, err := ah.service.Login(c, input.Email, input.Password)
+	 accesstoken,refreshtoken,expiresIn, err := ah.service.Login(c, input.Email, input.Password)
 	 if err != nil {
 		utils.ResponseError(c, err)
 		return
@@ -35,6 +35,7 @@ func (ah *AuthHandler) Login(c *gin.Context) {
 	response := v1dto.LoginResponse{
 		AccessToken: accesstoken,
 		ExpiresIn: expiresIn,
+		Refreshtoken:refreshtoken,
 	}
 	utils.ResponSuccess(c, http.StatusOK, "Login successful", response)
 }

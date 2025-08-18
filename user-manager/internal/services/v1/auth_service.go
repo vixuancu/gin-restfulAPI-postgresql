@@ -22,24 +22,32 @@ func NewAuthService(repo repository.UserRepository, TokenService auth.TokenServi
 }
 // authentication là xác thực người dùng
 // authorization là phân quyền người dùng
-func (as *authService) Login(c *gin.Context,email,password string) (string,int,error)  {
+func (as *authService) Login(c *gin.Context,email,password string) (string,string,int,error)  {
 	context := c.Request.Context() // Lấy context của go từ gin.Context
 	email = utils.NormalizeString(email)  
 
 	user,err := as.userRepo.GetByEmail(context, email)
 	if err != nil {
-		return "",0,utils.NewError("Invalid email or password",utils.ErrorCodeUnauthorized)
+		return "","",0,utils.NewError("Invalid email or password",utils.ErrorCodeUnauthorized)
 	}
 	// Kiểm tra mật khẩu
 	if err :=bcrypt.CompareHashAndPassword([]byte(user.UserPassword),[]byte(password)); err != nil {
-		return "",0,utils.NewError("Invalid email or password",utils.ErrorCodeUnauthorized)
+		return "","",0,utils.NewError("Invalid email or password",utils.ErrorCodeUnauthorized)
 	}
 	acesstoken,err := as.TokenService.GenerateAccessToken(user)
 	if err != nil {
-		return "",0,utils.NewError("Failed to generate access token",utils.ErrorCodeInternalServer)
+		return "","",0,utils.NewError("Failed to generate access token",utils.ErrorCodeInternalServer)
+	}
+	refreshtoken,err := as.TokenService.GenerateRefreshToken(user)
+	if err != nil {
+		return "","",0,utils.NewError("Failed to generate refresh token",utils.ErrorCodeInternalServer)
 	}
 
-	return acesstoken,int(auth.AcessTokenTTL),nil
+	if err:= as.TokenService.StoreRefreshToken(refreshtoken);err != nil {
+		return "","",0,utils.NewError("Cannot Save refresh Token in redis",utils.ErrorCodeInternalServer)
+	}
+
+	return acesstoken,refreshtoken.Token,int(auth.AcessTokenTTL),nil
 }
 
 func (as *authService) Logout(c *gin.Context) error {

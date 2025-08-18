@@ -14,6 +14,7 @@ import (
 	"user-management-api/internal/routes"
 	"user-management-api/internal/validation"
 	"user-management-api/pkg/auth"
+	"user-management-api/pkg/cache"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -45,7 +46,8 @@ func NewApplication(cfg *config.Config) *Application {
 		log.Fatal("Failed to connect to database:", err)
 	}
 	redisClient := config.NewRedisClient()
-	tokenService := auth.NewJWTService()
+	cacheService := cache.NewRedisCacheService(redisClient)
+	tokenService := auth.NewJWTService(cacheService)
 	ctx := &ModuleContext{
 		DB:    db.DB,
 		Redis: redisClient,

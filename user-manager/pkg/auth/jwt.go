@@ -1,22 +1,32 @@
 package auth
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"time"
 	"user-management-api/internal/db/sqlc"
 	"user-management-api/internal/utils"
+	"user-management-api/pkg/cache"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
 
 type JWTService struct {
+	cache * cache.RedisCacheService
 }
 
 type EncryptedPayload struct {
 	UserUUID string `json:"user_uuid"`
 	Email    string `json:"email"`
 	Role     int32  `json:"role"`
+}
+type RefreshToken struct {
+	Token     string    `json:"token"`
+	UserUUID  string    `json:"user_uuid"`
+	ExpiresAt time.Time `json:"expires_at"`
+	Revoked   bool      `json:"revoked"`
 }
 
 var (
@@ -25,13 +35,17 @@ var (
 )
 
 const (
-	AcessTokenTTL = 24 * time.Hour // Thời gian sống của access token
+	AcessTokenTTL   = 24 * time.Hour      // Thời gian sống của access token
+	RefreshTokenTTL = 30 * 24 * time.Hour // Thời gian sống của refresh token
 )
 
-func NewJWTService() TokenService {
-	return &JWTService{}
+func NewJWTService(cache * cache.RedisCacheService) TokenService {
+	return &JWTService{
+		cache: cache,
+	}
 }
 
+/*88888888888888888888888888888888 Access Token 88888888888888888888888888888888*/
 func (js *JWTService) GenerateAccessToken(user sqlc.User) (string, error) {
 	payload := &EncryptedPayload{
 		UserUUID: user.UserUuid.String(),
@@ -57,10 +71,6 @@ func (js *JWTService) GenerateAccessToken(user sqlc.User) (string, error) {
 	return token.SignedString(jwtSecret)                       // Trả về chuỗi token đã ký
 }
 
-func (js *JWTService) GenerateRefreshToken() {
-
-}
-
 // hàm kiểm tra token có hợp lệ hay không
 func (js *JWTService) ParseToken(tokenString string) (*jwt.Token, jwt.MapClaims, error) {
 	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (any, error) {
@@ -76,23 +86,45 @@ func (js *JWTService) ParseToken(tokenString string) (*jwt.Token, jwt.MapClaims,
 	return token, claims, nil
 }
 
-func (js *JWTService) DecryptAccessTokenPayload(tokenString string) (*EncryptedPayload,error) {
-	_,claims,err:=js.ParseToken(tokenString)
+func (js *JWTService) DecryptAccessTokenPayload(tokenString string) (*EncryptedPayload, error) {
+	_, claims, err := js.ParseToken(tokenString)
 	if err != nil {
-		return nil, utils.WrapError(err,"cannot parse token", utils.ErrorCodeUnauthorized)
+		return nil, utils.WrapError(err, "cannot parse token", utils.ErrorCodeUnauthorized)
 	}
 	encryptedData, ok := claims["data"].(string)
 	if !ok {
 		return nil, utils.NewError("Invalid token data", utils.ErrorCodeUnauthorized)
 	}
-	decryptedByte,err:=utils.DecryptAES(encryptedData, jwtEncryptKey)
+	decryptedByte, err := utils.DecryptAES(encryptedData, jwtEncryptKey)
 	if err != nil {
 		return nil, utils.NewError("Failed to decrypt token data", utils.ErrorCodeUnauthorized)
 	}
 	// Chuyển đổi dữ liệu đã giải mã thành EncryptedPayload (từ JSON sang struct)
 	var payload EncryptedPayload
 	if err := json.Unmarshal(decryptedByte, &payload); err != nil {
-		return nil, utils.WrapError(err,"Failed to unmarshal token data", utils.ErrorCodeInternalServer)
+		return nil, utils.WrapError(err, "Failed to unmarshal token data", utils.ErrorCodeInternalServer)
 	}
 	return &payload, nil
+}
+
+/*88888888888888888888888888888888 Refresh Token 88888888888888888888888888888888*/
+
+func (js *JWTService) GenerateRefreshToken(user sqlc.User) (RefreshToken, error) {
+	tokenBytes := make([]byte, 32)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		return RefreshToken{}, err
+	} // Sinh nonce ngẫu nhiên
+	token := base64.URLEncoding.EncodeToString(tokenBytes) // Trả về chuỗi base64 của dữ liệu đã mã hóa
+
+	return RefreshToken{
+		Token: token,
+		UserUUID:  user.UserUuid.String(),
+		ExpiresAt: time.Now().Add(RefreshTokenTTL), // Thời gian hết
+		Revoked:   false,                            // Chưa bị thu hồi
+	}, nil
+}
+
+func (js *JWTService) StoreRefreshToken(token RefreshToken) error{
+	cacheKey := "refresh_token:" + token.Token
+	return js.cache.Set(cacheKey,token, RefreshTokenTTL)
 }
