@@ -2,7 +2,9 @@ package routes
 
 import (
 	"user-management-api/internal/middleware"
+	V1routes "user-management-api/internal/routes/v1"
 	"user-management-api/internal/utils"
+	"user-management-api/pkg/auth"
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
@@ -13,12 +15,13 @@ type Routes interface {
 }
 
 // lấy ra interface Routes để định nghĩa các route
-func RegisterRoutes(router *gin.Engine, routes ...Routes) {
+func RegisterRoutes(router *gin.Engine, authService auth.TokenService ,routes ...Routes) {
 
 	httpLogger := utils.NewLoggerWithPath("../../internal/logs/http.log", "info")
 	recoveryLogger := utils.NewLoggerWithPath("../../internal/logs/recovery.log", "warning")
 	rateLimiterLogger := utils.NewLoggerWithPath("../../internal/logs/rate_limiter.log", "warning")
 
+	router.Use(gzip.Gzip(gzip.DefaultCompression))
 	router.Use(
 		middleware.RecoveryMiddleware(recoveryLogger),
 		middleware.CORSMiddleware(),
@@ -26,12 +29,22 @@ func RegisterRoutes(router *gin.Engine, routes ...Routes) {
 		middleware.APIKeyMiddleware(),
 		middleware.RateLimitMiddleware(rateLimiterLogger),
 		middleware.TraceMiddleware(),
-		middleware.AuthMiddleware(),
 	)
-	router.Use(gzip.Gzip(gzip.DefaultCompression))
+
 	v1api := router.Group("/api/v1")
+	middleware.InitAuthMiddleware(authService)
+	protected := v1api.Group("")
+	protected.Use(middleware.AuthMiddleware())
+
 	for _, r := range routes {
-		r.Register(v1api)
+
+		switch r.(type) {
+		case *V1routes.AuthRoutes:
+			r.Register(v1api) // Routes KHÔNG cần authentication
+		default:
+			r.Register(protected) // Routes CẦN authentication
+		}
+
 	}
 	// Đăng ký các route không tìm thấy
 	router.NoRoute(func(c *gin.Context) {

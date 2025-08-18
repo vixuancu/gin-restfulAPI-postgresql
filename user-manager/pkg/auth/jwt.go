@@ -28,7 +28,7 @@ const (
 	AcessTokenTTL = 24 * time.Hour // Thời gian sống của access token
 )
 
-func NewJWTService() *JWTService {
+func NewJWTService() TokenService {
 	return &JWTService{}
 }
 
@@ -59,4 +59,40 @@ func (js *JWTService) GenerateAccessToken(user sqlc.User) (string, error) {
 
 func (js *JWTService) GenerateRefreshToken() {
 
+}
+
+// hàm kiểm tra token có hợp lệ hay không
+func (js *JWTService) ParseToken(tokenString string) (*jwt.Token, jwt.MapClaims, error) {
+	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (any, error) {
+		return jwtSecret, nil // Trả về secret key để xác thực token
+	})
+	if err != nil || !token.Valid {
+		return nil, nil, utils.NewError("Invalid token", utils.ErrorCodeUnauthorized)
+	}
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, nil, utils.NewError("Invalid token claims", utils.ErrorCodeUnauthorized)
+	}
+	return token, claims, nil
+}
+
+func (js *JWTService) DecryptAccessTokenPayload(tokenString string) (*EncryptedPayload,error) {
+	_,claims,err:=js.ParseToken(tokenString)
+	if err != nil {
+		return nil, utils.WrapError(err,"cannot parse token", utils.ErrorCodeUnauthorized)
+	}
+	encryptedData, ok := claims["data"].(string)
+	if !ok {
+		return nil, utils.NewError("Invalid token data", utils.ErrorCodeUnauthorized)
+	}
+	decryptedByte,err:=utils.DecryptAES(encryptedData, jwtEncryptKey)
+	if err != nil {
+		return nil, utils.NewError("Failed to decrypt token data", utils.ErrorCodeUnauthorized)
+	}
+	// Chuyển đổi dữ liệu đã giải mã thành EncryptedPayload (từ JSON sang struct)
+	var payload EncryptedPayload
+	if err := json.Unmarshal(decryptedByte, &payload); err != nil {
+		return nil, utils.WrapError(err,"Failed to unmarshal token data", utils.ErrorCodeInternalServer)
+	}
+	return &payload, nil
 }
