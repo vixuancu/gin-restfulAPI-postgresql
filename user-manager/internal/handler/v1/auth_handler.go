@@ -27,11 +27,16 @@ func (ah *AuthHandler) Login(c *gin.Context) {
 		utils.ResponseValidator(c, validation.HandleValidationError(err))
 		return
 	}
-	if err := ah.service.Login(c, input.Email, input.Password); err != nil {
+	 accesstoken,expiresIn, err := ah.service.Login(c, input.Email, input.Password)
+	 if err != nil {
 		utils.ResponseError(c, err)
 		return
 	}
-	utils.ResponSuccess(c, http.StatusOK, "Login successful")
+	response := v1dto.LoginResponse{
+		AccessToken: accesstoken,
+		ExpiresIn: expiresIn,
+	}
+	utils.ResponSuccess(c, http.StatusOK, "Login successful", response)
 }
 func (ah *AuthHandler) Logout(c *gin.Context) {
 	utils.ResponSuccess(c, http.StatusOK, "Logout successful")

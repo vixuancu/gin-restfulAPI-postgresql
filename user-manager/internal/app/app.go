@@ -13,6 +13,7 @@ import (
 	"user-management-api/internal/db/sqlc"
 	"user-management-api/internal/routes"
 	"user-management-api/internal/validation"
+	"user-management-api/pkg/auth"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -29,12 +30,12 @@ type Application struct {
 }
 
 type ModuleContext struct {
-	DB sqlc.Querier
+	DB    sqlc.Querier
 	Redis *redis.Client
 }
 
 func NewApplication(cfg *config.Config) *Application {
-	
+
 	r := gin.Default()
 	loadEnv()
 	if err := validation.InitValidator(); err != nil {
@@ -44,14 +45,15 @@ func NewApplication(cfg *config.Config) *Application {
 		log.Fatal("Failed to connect to database:", err)
 	}
 	redisClient := config.NewRedisClient()
+	tokenService := auth.NewJWTService()
 	ctx := &ModuleContext{
-		DB : db.DB,
+		DB:    db.DB,
 		Redis: redisClient,
 	}
 
 	modules := []Module{
 		NewUserModule(ctx),
-		NewAuthModule(ctx),
+		NewAuthModule(ctx, tokenService),
 	}
 	routes.RegisterRoutes(r, GetModuleRoutes(modules)...)
 	return &Application{
@@ -80,7 +82,7 @@ func (app *Application) Run() error {
 		}
 	}()
 
-	<- quit // Chờ tín hiệu dừng
+	<-quit // Chờ tín hiệu dừng
 	log.Println("Shutting down server...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)

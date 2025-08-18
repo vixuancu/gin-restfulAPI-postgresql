@@ -17,6 +17,6 @@ type UserService interface {
 	DeleteUser(c *gin.Context, uuid uuid.UUID)  error
 }
 type AuthService interface {
-	Login(c *gin.Context,email,password string) error
+	Login(c *gin.Context,email,password string) (string,int,error)
 	Logout(c *gin.Context) error
 }
