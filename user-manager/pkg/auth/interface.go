@@ -12,4 +12,6 @@ type TokenService interface {
 	DecryptAccessTokenPayload(tokenString string) (*EncryptedPayload,error)
 	GenerateRefreshToken(user sqlc.User) (RefreshToken, error)
 	StoreRefreshToken(token RefreshToken) error
+	ValidateRefreshToken(token string)  (RefreshToken,error)
+	RevokedRefreshToken(token string) error
 }	

@@ -14,7 +14,7 @@ import (
 )
 
 type JWTService struct {
-	cache * cache.RedisCacheService
+	cache *cache.RedisCacheService
 }
 
 type EncryptedPayload struct {
@@ -35,11 +35,11 @@ var (
 )
 
 const (
-	AcessTokenTTL   = 24 * time.Hour      // Thời gian sống của access token
+	AcessTokenTTL   = 10 * time.Second    // Thời gian sống của access token
 	RefreshTokenTTL = 30 * 24 * time.Hour // Thời gian sống của refresh token
 )
 
-func NewJWTService(cache * cache.RedisCacheService) TokenService {
+func NewJWTService(cache *cache.RedisCacheService) TokenService {
 	return &JWTService{
 		cache: cache,
 	}
@@ -117,14 +117,37 @@ func (js *JWTService) GenerateRefreshToken(user sqlc.User) (RefreshToken, error)
 	token := base64.URLEncoding.EncodeToString(tokenBytes) // Trả về chuỗi base64 của dữ liệu đã mã hóa
 
 	return RefreshToken{
-		Token: token,
+		Token:     token,
 		UserUUID:  user.UserUuid.String(),
 		ExpiresAt: time.Now().Add(RefreshTokenTTL), // Thời gian hết
-		Revoked:   false,                            // Chưa bị thu hồi
+		Revoked:   false,                           // Chưa bị thu hồi
 	}, nil
 }
 
-func (js *JWTService) StoreRefreshToken(token RefreshToken) error{
+func (js *JWTService) StoreRefreshToken(token RefreshToken) error {
 	cacheKey := "refresh_token:" + token.Token
-	return js.cache.Set(cacheKey,token, RefreshTokenTTL)
+	return js.cache.Set(cacheKey, token, RefreshTokenTTL)
+}
+
+func (js *JWTService) ValidateRefreshToken(token string) (RefreshToken, error) {
+	cacheKey := "refresh_token:" + token
+
+	var refreshToken RefreshToken
+	err := js.cache.Get(cacheKey, &refreshToken)
+	if err != nil || refreshToken.Revoked || refreshToken.ExpiresAt.Before(time.Now()) {
+		return RefreshToken{}, utils.WrapError(err, "Cannot get refresh token", utils.ErrorCodeInternalServer)
+	}
+	return refreshToken, nil
+}
+
+func (js *JWTService) RevokedRefreshToken(token string) error {
+	cacheKey := "refresh_token:" + token
+	var refreshToken RefreshToken
+	err := js.cache.Get(cacheKey, &refreshToken)
+	if err != nil {
+		return utils.WrapError(err, "Cannot get refresh token", utils.ErrorCodeInternalServer)
+	}
+	refreshToken.Revoked = true // Đánh dấu token là đã bị thu hồi
+
+	return js.cache.Set(cacheKey, refreshToken, time.Until(refreshToken.ExpiresAt))
 }

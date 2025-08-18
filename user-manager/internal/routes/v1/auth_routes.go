@@ -20,6 +20,7 @@ func (ar *AuthRoutes) Register(r *gin.RouterGroup) {
 	{
 		auth.POST("/login", ar.authHandler.Login) // Đăng nhập
 		auth.POST("logout", ar.authHandler.Logout) // Đăng xuat
+		auth.POST("/refresh", ar.authHandler.RefreshToken) // Làm mới token
 	}
 }
 

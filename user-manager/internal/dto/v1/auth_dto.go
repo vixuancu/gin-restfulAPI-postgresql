@@ -10,3 +10,6 @@ type LoginResponse struct {
 	ExpiresIn   int    `json:"expires_in"`
 	Refreshtoken string `json:"refresh_token"`
 }
+type RefreshTokenInput struct {
+	RefreshToen string `json:"refresh_token" binding:"required"`
+}
