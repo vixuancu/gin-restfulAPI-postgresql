@@ -124,7 +124,7 @@ func (as *authService) Login(c *gin.Context, email, password string) (string, st
 	}
 
 	as.CleanupClients(ip) // Xóa client khỏi map sau khi đăng nhập thành công
-	return acesstoken, refreshtoken.Token, int(auth.AcessTokenTTL), nil
+	return acesstoken, refreshtoken.Token, int(auth.AcessTokenTTL.Seconds()), nil
 }
 
 func (as *authService) Logout(c *gin.Context, refreshTokenString string) error {
@@ -187,5 +187,5 @@ func (as *authService) RefreshToken(c *gin.Context, refreshTokenString string) (
 	if err := as.TokenService.StoreRefreshToken(refreshtoken); err != nil {
 		return "", "", 0, utils.NewError("Cannot Save refresh Token in redis", utils.ErrorCodeInternalServer)
 	}
-	return acesstoken, refreshtoken.Token, int(auth.AcessTokenTTL), nil
+	return acesstoken, refreshtoken.Token, int(auth.AcessTokenTTL.Seconds()), nil
 }

@@ -23,7 +23,7 @@ func InitDB() error {
 	if err != nil {
 		return fmt.Errorf("failed to parse database connection string: %v", err)
 	}
-	sqlLogger := utils.NewLoggerWithPath("../../internal/logs/sql.log", "info")
+	sqlLogger := utils.NewLoggerWithPath("sql.log", "info")
 
 	conf.ConnConfig.Tracer = &tracelog.TraceLog{
 		Logger: &pgx.PgxZeroLogTracer{

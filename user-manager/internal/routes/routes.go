@@ -18,9 +18,9 @@ type Routes interface {
 // lấy ra interface Routes để định nghĩa các route
 func RegisterRoutes(router *gin.Engine, authService auth.TokenService, cacheService cache.RedisCacheService ,routes ...Routes) {
 
-	httpLogger := utils.NewLoggerWithPath("../../internal/logs/http.log", "info")
-	recoveryLogger := utils.NewLoggerWithPath("../../internal/logs/recovery.log", "warning")
-	rateLimiterLogger := utils.NewLoggerWithPath("../../internal/logs/rate_limiter.log", "warning")
+	httpLogger := utils.NewLoggerWithPath("http.log", "info")
+	recoveryLogger := utils.NewLoggerWithPath("recovery.log", "warning")
+	rateLimiterLogger := utils.NewLoggerWithPath("rate_limiter.log", "warning")
 
 	router.Use(gzip.Gzip(gzip.DefaultCompression))
 	router.Use(

@@ -35,8 +35,8 @@ var (
 )
 
 const (
-	AcessTokenTTL   = 15 * time.Minute   // Thời gian sống của access token
-	RefreshTokenTTL = 7 * 24 * time.Hour // Thời gian sống của refresh token
+	AcessTokenTTL   = 15 * time.Minute   // Thời gian sống của access token giá trị ở đây đang là nanoseconds cần chuyển đổi sang seconds
+	RefreshTokenTTL = 7 * 24 * time.Hour // Thời gian sống của refresh token giá trị ở đây đang là nanoseconds cần chuyển đổi sang seconds
 )
 
 func NewJWTService(cache cache.RedisCacheService) TokenService {

@@ -17,7 +17,6 @@ import (
 	"user-management-api/pkg/cache"
 
 	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -38,7 +37,7 @@ type ModuleContext struct {
 func NewApplication(cfg *config.Config) *Application {
 
 	r := gin.Default()
-	loadEnv()
+
 	if err := validation.InitValidator(); err != nil {
 		log.Fatal("Failed to initialize validator:", err)
 	}
@@ -55,9 +54,9 @@ func NewApplication(cfg *config.Config) *Application {
 
 	modules := []Module{
 		NewUserModule(ctx),
-		NewAuthModule(ctx, tokenService,cacheService),
+		NewAuthModule(ctx, tokenService, cacheService),
 	}
-	routes.RegisterRoutes(r,tokenService,cacheService, GetModuleRoutes(modules)...)
+	routes.RegisterRoutes(r, tokenService, cacheService, GetModuleRoutes(modules)...)
 	return &Application{
 		config:  cfg,
 		router:  r,
@@ -102,10 +101,4 @@ func GetModuleRoutes(modules []Module) []routes.Routes {
 		routesList[i] = module.Routes()
 	}
 	return routesList
-}
-func loadEnv() {
-	err := godotenv.Load("../../.env") // Load environment variables from .env file
-	if err != nil {
-		log.Println("Error loading .env file")
-	}
 }
