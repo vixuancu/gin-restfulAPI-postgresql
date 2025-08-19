@@ -22,7 +22,7 @@ import (
 
 type userService struct {
 	userRepo repository.UserRepository
-	cache    *cache.RedisCacheService
+	cache    cache.RedisCacheService
 }
 
 func NewUserService(repo repository.UserRepository, redisClient *redis.Client) UserService {

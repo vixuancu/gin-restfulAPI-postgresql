@@ -39,9 +39,7 @@ func (ah *AuthHandler) Login(c *gin.Context) {
 	}
 	utils.ResponSuccess(c, http.StatusOK, "Login successful", response)
 }
-func (ah *AuthHandler) Logout(c *gin.Context) {
-	utils.ResponSuccess(c, http.StatusOK, "Logout successful")
-}
+
 func (ah *AuthHandler) RefreshToken(c *gin.Context) {
 	var input v1dto.RefreshTokenInput
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -59,4 +57,17 @@ func (ah *AuthHandler) RefreshToken(c *gin.Context) {
 		Refreshtoken:refreshtoken,
 	}
 	utils.ResponSuccess(c, http.StatusOK, "refresh token generate successful", response)
+}
+func (ah *AuthHandler) Logout(c *gin.Context) {
+	var input v1dto.RefreshTokenInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		utils.ResponseValidator(c, validation.HandleValidationError(err))
+		return
+	}
+	if err := ah.service.Logout(c, input.RefreshToen); err != nil {
+		utils.ResponseError(c, err)
+		return
+	}
+
+	utils.ResponSuccess(c, http.StatusOK, "Logout successful")
 }

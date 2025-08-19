@@ -14,7 +14,7 @@ import (
 )
 
 type JWTService struct {
-	cache *cache.RedisCacheService
+	cache cache.RedisCacheService
 }
 
 type EncryptedPayload struct {
@@ -35,11 +35,11 @@ var (
 )
 
 const (
-	AcessTokenTTL   = 10 * time.Second    // Thời gian sống của access token
-	RefreshTokenTTL = 30 * 24 * time.Hour // Thời gian sống của refresh token
+	AcessTokenTTL   = 15 * time.Minute   // Thời gian sống của access token
+	RefreshTokenTTL = 7 * 24 * time.Hour // Thời gian sống của refresh token
 )
 
-func NewJWTService(cache *cache.RedisCacheService) TokenService {
+func NewJWTService(cache cache.RedisCacheService) TokenService {
 	return &JWTService{
 		cache: cache,
 	}
@@ -60,6 +60,7 @@ func (js *JWTService) GenerateAccessToken(user sqlc.User) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	// claims là các thông tin được lưu trữ trong token
 	claims := jwt.MapClaims{
 		"jti":  uuid.NewString(),                                  // ID duy nhất của token
 		"data": encryptedData,                                     // Dữ liệu đã mã hóa

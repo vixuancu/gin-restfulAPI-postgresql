@@ -18,6 +18,6 @@ type UserService interface {
 }
 type AuthService interface {
 	Login(c *gin.Context,email,password string) (string,string,int,error)
-	Logout(c *gin.Context) error
-	RefreshToken(c *gin.Context,token string) (string,string,int,error)
+	Logout(c *gin.Context ,refreshTokenString string ) error
+	RefreshToken(c *gin.Context,refreshTokenString string) (string,string,int,error)
 }

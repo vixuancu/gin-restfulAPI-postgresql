@@ -5,6 +5,7 @@ import (
 	V1routes "user-management-api/internal/routes/v1"
 	"user-management-api/internal/utils"
 	"user-management-api/pkg/auth"
+	"user-management-api/pkg/cache"
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
@@ -15,7 +16,7 @@ type Routes interface {
 }
 
 // lấy ra interface Routes để định nghĩa các route
-func RegisterRoutes(router *gin.Engine, authService auth.TokenService ,routes ...Routes) {
+func RegisterRoutes(router *gin.Engine, authService auth.TokenService, cacheService cache.RedisCacheService ,routes ...Routes) {
 
 	httpLogger := utils.NewLoggerWithPath("../../internal/logs/http.log", "info")
 	recoveryLogger := utils.NewLoggerWithPath("../../internal/logs/recovery.log", "warning")
@@ -32,7 +33,7 @@ func RegisterRoutes(router *gin.Engine, authService auth.TokenService ,routes ..
 	)
 
 	v1api := router.Group("/api/v1")
-	middleware.InitAuthMiddleware(authService)
+	middleware.InitAuthMiddleware(authService,cacheService)
 	protected := v1api.Group("")
 	protected.Use(middleware.AuthMiddleware())
 
