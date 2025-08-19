@@ -8,9 +8,15 @@ importdb:
 # export database
 exportdb:
 	docker exec -i postgres-db pg_dump -U vixuancu -d master-golang > ./backupdb-master-golang.sql
+# Build binary file
+build:
+	go build -o bin/myapp ./cmd/api
+# Run binary file
+run-binary:
+	./bin/myapp
 # run server
 server:
-	cd cmd/api && go run .
+	go run ./cmd/api
 # generate sqlc
 sqlc:
 	sqlc generate
@@ -41,4 +47,4 @@ migrate-drop:
 # apple migrations to a specific version (make migrate-goto VERSION=1) - goto này là chạy đến bao gồm phiên bản trước luôn
 migrate-goto:
 	migrate -path $(MIGRATION_DIRS) -database "$(CONN_STRING)" goto $(VERSION)
-.PHONY: importdb exportdb server start-container remove-container migrate-create migrate-up migrate-down migrate-force migrate-drop migrate-goto migrate-down-n sqlc
+.PHONY: importdb exportdb server start-container remove-container migrate-create migrate-up migrate-down migrate-force migrate-drop migrate-goto migrate-down-n sqlc build run-binary
