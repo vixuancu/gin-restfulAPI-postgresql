@@ -2,6 +2,7 @@ package v1services
 
 import (
 	"strings"
+	"sync"
 	"time"
 	"user-management-api/internal/repository"
 	"user-management-api/internal/utils"
@@ -11,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/time/rate"
 )
 
 type authService struct {
@@ -18,6 +20,17 @@ type authService struct {
 	TokenService auth.TokenService
 	cache        cache.RedisCacheService
 }
+type LoginAttempt struct {
+	Limiter  *rate.Limiter
+	Lastseen time.Time
+}
+
+var (
+	mu               sync.Mutex
+	clients          = make(map[string]*LoginAttempt) // Lưu trữ client theo IP
+	LoginAttemptTTL  = 5 * time.Minute                // 5 phút tương ứng với 5 token
+	MaxLoginAttempts = 5                              // Số lần đăng nhập tối đa trong khoảng thời gian TTL
+)
 
 func NewAuthService(repo repository.UserRepository, TokenService auth.TokenService, cache cache.RedisCacheService) *authService {
 	return &authService{
@@ -27,18 +40,74 @@ func NewAuthService(repo repository.UserRepository, TokenService auth.TokenServi
 	}
 }
 
+func (as *authService) getClientIP(c *gin.Context) string {
+	// Lấy IP từ header X-Forwarded-For nếu có, nếu không thì lấy IP thực
+	ip := c.ClientIP()
+	if ip == "" {
+		ip = c.Request.RemoteAddr
+	}
+	return ip
+}
+
+// Lấy ra rate limiter cho client theo IP
+func (as *authService) getLoginAttempt(ip string) *rate.Limiter {
+	mu.Lock()
+	defer mu.Unlock()
+	client, exists := clients[ip]
+	if !exists {
+
+		// rate.Limit đơn vị là số request/giây nên phải .Seconds() để chuyển đổi sang giây
+		newclient := &LoginAttempt{
+			Limiter:  rate.NewLimiter(rate.Limit(float32(MaxLoginAttempts)/float32(LoginAttemptTTL.Seconds())), MaxLoginAttempts),
+			Lastseen: time.Now(),
+		}
+		clients[ip] = newclient
+		// log.Printf("a client[%s]-{limiter: %v, lastseen: %v} is created", ip, newclient.Limiter, newclient.Lastseen)
+		return newclient.Limiter
+	}
+	// Cập nhật thời gian cuối cùng thấy client
+	// log.Printf("a client[%s]-{limiter: %v, lastseen: %v} is created", ip, client.Limiter, client.Lastseen)
+	client.Lastseen = time.Now()
+
+	return client.Limiter
+
+}
+func (as *authService) CleanupClients(ip string) {
+	mu.Lock()
+	defer mu.Unlock()
+	delete(clients, ip) // Xóa client khỏi map
+}
+
+func (as *authService) CheckLoginAttempt(c *gin.Context) error{
+	ip := as.getClientIP(c)           // Lấy IP của client
+	limiter := as.getLoginAttempt(ip) // Lấy rate limiter cho client theo IP
+
+	if !limiter.Allow() {
+		return utils.NewError("Too many login attempts, please try again later", utils.ErrorCodeTooManyRequests)
+	}
+	return  nil
+}
+
 // authentication là xác thực người dùng
 // authorization là phân quyền người dùng
 func (as *authService) Login(c *gin.Context, email, password string) (string, string, int, error) {
 	context := c.Request.Context() // Lấy context của go từ gin.Context
+	ip := as.getClientIP(c)        // Lấy IP của client
+
+	if err:= as.CheckLoginAttempt(c); err != nil {
+		return "", "", 0, err
+	}
+	
 	email = utils.NormalizeString(email)
 
 	user, err := as.userRepo.GetByEmail(context, email)
 	if err != nil {
+		as.getLoginAttempt(ip) // Lấy rate limiter cho client theo IP
 		return "", "", 0, utils.NewError("Invalid email or password", utils.ErrorCodeUnauthorized)
 	}
 	// Kiểm tra mật khẩu
 	if err := bcrypt.CompareHashAndPassword([]byte(user.UserPassword), []byte(password)); err != nil {
+		as.getLoginAttempt(ip) // Lấy rate limiter cho client theo IP
 		return "", "", 0, utils.NewError("Invalid email or password", utils.ErrorCodeUnauthorized)
 	}
 	acesstoken, err := as.TokenService.GenerateAccessToken(user)
@@ -54,6 +123,7 @@ func (as *authService) Login(c *gin.Context, email, password string) (string, st
 		return "", "", 0, utils.NewError("Cannot Save refresh Token in redis", utils.ErrorCodeInternalServer)
 	}
 
+	as.CleanupClients(ip) // Xóa client khỏi map sau khi đăng nhập thành công
 	return acesstoken, refreshtoken.Token, int(auth.AcessTokenTTL), nil
 }
 

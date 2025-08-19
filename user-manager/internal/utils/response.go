@@ -9,13 +9,14 @@ import (
 type ErrorCode string
 
 const (
-	ErrorCodeBadRequest     ErrorCode = "BAD_REQUEST"
-	ErrorCodeNotFound       ErrorCode = "NOT_FOUND"
-	ErrorCodeValidation     ErrorCode = "VALIDATION_ERROR"
-	ErrorCodeInternalServer ErrorCode = "INTERNAL_SERVER_ERROR"
-	ErrorCodeUnauthorized   ErrorCode = "UNAUTHORIZED"
-	ErrorCodeForbidden      ErrorCode = "FORBIDDEN"
-	ErrorCodeConflict       ErrorCode = "CONFLICT"
+	ErrorCodeBadRequest      ErrorCode = "BAD_REQUEST"
+	ErrorCodeNotFound        ErrorCode = "NOT_FOUND"
+	ErrorCodeValidation      ErrorCode = "VALIDATION_ERROR"
+	ErrorCodeInternalServer  ErrorCode = "INTERNAL_SERVER_ERROR"
+	ErrorCodeUnauthorized    ErrorCode = "UNAUTHORIZED"
+	ErrorCodeForbidden       ErrorCode = "FORBIDDEN"
+	ErrorCodeConflict        ErrorCode = "CONFLICT"
+	ErrorCodeTooManyRequests ErrorCode = "TOO_MANY_REQUESTS"
 )
 
 type AppError struct {
@@ -77,21 +78,20 @@ func ResponSuccess(c *gin.Context, status int, message string, data ...any) {
 		Message: CapitalizeFirst(message),
 	}
 	if len(data) > 0 && data[0] != nil {
-		
-		if m,ok :=data[0].(map[string]any); ok { 
-			if p,exists := m["pagination"]; exists {
+
+		if m, ok := data[0].(map[string]any); ok {
+			if p, exists := m["pagination"]; exists {
 				response.Pagination = p
 			}
-			if d,exists := m["data"]; exists {
+			if d, exists := m["data"]; exists {
 				response.Data = d
-			}else {
+			} else {
 				response.Data = m
 			}
-			
-		}else {
+
+		} else {
 			response.Data = data[0]
 		}
-		
 
 	}
 	c.JSON(status, response)
@@ -110,6 +110,8 @@ func httpStatusFromCode(code ErrorCode) int {
 		return 404
 	case ErrorCodeValidation:
 		return 422
+	case ErrorCodeTooManyRequests:
+		return 429
 	case ErrorCodeInternalServer:
 		return 500
 	case ErrorCodeUnauthorized:
