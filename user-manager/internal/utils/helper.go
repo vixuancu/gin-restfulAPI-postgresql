@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -44,4 +46,12 @@ func NewLoggerWithPath(fileName string, level string) *zerolog.Logger {
 		IsDev:      GetEnv("APP_ENV", "development"),
 	}
 	return logger.NewLogger(config)
+}
+
+func GenerateRandomString(length int) (string, error) {
+	bytes := make([]byte, length)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	} // Sinh nonce ngẫu nhiên
+	return base64.URLEncoding.EncodeToString(bytes), nil // Trả về chuỗi base64 của dữ liệu đã mã hóa
 }

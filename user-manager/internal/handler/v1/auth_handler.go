@@ -27,15 +27,15 @@ func (ah *AuthHandler) Login(c *gin.Context) {
 		utils.ResponseValidator(c, validation.HandleValidationError(err))
 		return
 	}
-	 accesstoken,refreshtoken,expiresIn, err := ah.service.Login(c, input.Email, input.Password)
-	 if err != nil {
+	accesstoken, refreshtoken, expiresIn, err := ah.service.Login(c, input.Email, input.Password)
+	if err != nil {
 		utils.ResponseError(c, err)
 		return
 	}
 	response := v1dto.LoginResponse{
-		AccessToken: accesstoken,
-		ExpiresIn: expiresIn,
-		Refreshtoken:refreshtoken,
+		AccessToken:  accesstoken,
+		ExpiresIn:    expiresIn,
+		Refreshtoken: refreshtoken,
 	}
 	utils.ResponSuccess(c, http.StatusOK, "Login successful", response)
 }
@@ -46,15 +46,15 @@ func (ah *AuthHandler) RefreshToken(c *gin.Context) {
 		utils.ResponseValidator(c, validation.HandleValidationError(err))
 		return
 	}
-	accesstoken,refreshtoken,expiresIn, err:=ah.service.RefreshToken(c, input.RefreshToen)
+	accesstoken, refreshtoken, expiresIn, err := ah.service.RefreshToken(c, input.RefreshToen)
 	if err != nil {
 		utils.ResponseError(c, err)
 		return
 	}
 	response := v1dto.LoginResponse{
-		AccessToken: accesstoken,
-		ExpiresIn: expiresIn,
-		Refreshtoken:refreshtoken,
+		AccessToken:  accesstoken,
+		ExpiresIn:    expiresIn,
+		Refreshtoken: refreshtoken,
 	}
 	utils.ResponSuccess(c, http.StatusOK, "refresh token generate successful", response)
 }
@@ -70,4 +70,21 @@ func (ah *AuthHandler) Logout(c *gin.Context) {
 	}
 
 	utils.ResponSuccess(c, http.StatusOK, "Logout successful")
+}
+
+func (ah *AuthHandler) ForgotPassword(c *gin.Context) {
+	var input v1dto.ForgotPasswordInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		utils.ResponseValidator(c, validation.HandleValidationError(err))
+		return
+	}
+	if err:= ah.service.ForgotPassword(c, input.Email); err != nil {
+		utils.ResponseError(c, err)
+		return
+	}
+	utils.ResponSuccess(c, http.StatusOK, "ResetLink sent to email successfully")
+}
+
+func (ah *AuthHandler) ResetPassword(c *gin.Context) {
+
 }

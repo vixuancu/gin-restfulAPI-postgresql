@@ -1,6 +1,7 @@
 package v1services
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -8,6 +9,7 @@ import (
 	"user-management-api/internal/utils"
 	"user-management-api/pkg/auth"
 	"user-management-api/pkg/cache"
+	"user-management-api/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -18,7 +20,7 @@ import (
 type authService struct {
 	userRepo     repository.UserRepository
 	TokenService auth.TokenService
-	cache        cache.RedisCacheService
+	cacheService        cache.RedisCacheService
 }
 type LoginAttempt struct {
 	Limiter  *rate.Limiter
@@ -32,11 +34,11 @@ var (
 	MaxLoginAttempts = 5                              // Số lần đăng nhập tối đa trong khoảng thời gian TTL
 )
 
-func NewAuthService(repo repository.UserRepository, TokenService auth.TokenService, cache cache.RedisCacheService) *authService {
+func NewAuthService(repo repository.UserRepository, TokenService auth.TokenService, cacheService cache.RedisCacheService) *authService {
 	return &authService{
 		userRepo:     repo,
 		TokenService: TokenService,
-		cache:        cache,
+		cacheService:        cacheService,
 	}
 }
 
@@ -78,14 +80,14 @@ func (as *authService) CleanupClients(ip string) {
 	delete(clients, ip) // Xóa client khỏi map
 }
 
-func (as *authService) CheckLoginAttempt(c *gin.Context) error{
+func (as *authService) CheckLoginAttempt(c *gin.Context) error {
 	ip := as.getClientIP(c)           // Lấy IP của client
 	limiter := as.getLoginAttempt(ip) // Lấy rate limiter cho client theo IP
 
 	if !limiter.Allow() {
 		return utils.NewError("Too many login attempts, please try again later", utils.ErrorCodeTooManyRequests)
 	}
-	return  nil
+	return nil
 }
 
 // authentication là xác thực người dùng
@@ -94,10 +96,10 @@ func (as *authService) Login(c *gin.Context, email, password string) (string, st
 	context := c.Request.Context() // Lấy context của go từ gin.Context
 	ip := as.getClientIP(c)        // Lấy IP của client
 
-	if err:= as.CheckLoginAttempt(c); err != nil {
+	if err := as.CheckLoginAttempt(c); err != nil {
 		return "", "", 0, err
 	}
-	
+
 	email = utils.NormalizeString(email)
 
 	user, err := as.userRepo.GetByEmail(context, email)
@@ -143,7 +145,7 @@ func (as *authService) Logout(c *gin.Context, refreshTokenString string) error {
 		exp := time.Unix(int64(expUnix), 0)   // Chuyển đổi sang thời gian
 		key := "blacklist:" + jti             // Tạo khóa blacklist
 		ttl := time.Until(exp)                // Tính thời gian hết hạn bằng thời gian còn lại của access token
-		as.cache.Set(key, "revoked", ttl)     // Lưu vào cache với thời gian hết hạn
+		as.cacheService.Set(key, "revoked", ttl)     // Lưu vào cache với thời gian hết hạn
 	}
 
 	// Vô hiệu hóa refresh token
@@ -188,4 +190,39 @@ func (as *authService) RefreshToken(c *gin.Context, refreshTokenString string) (
 		return "", "", 0, utils.NewError("Cannot Save refresh Token in redis", utils.ErrorCodeInternalServer)
 	}
 	return acesstoken, refreshtoken.Token, int(auth.AcessTokenTTL.Seconds()), nil
+}
+
+func (as *authService) ForgotPassword(c *gin.Context, email string) error {
+	context := c.Request.Context() // Lấy context của go từ gin.Context
+
+	rateLimitKey := fmt.Sprintf("reset:ratelimit:%s", email)
+
+	if exists,err := as.cacheService.Exists(rateLimitKey); err == nil && exists {
+		return utils.NewError("You have already requested a password reset. Please try again later.", utils.ErrorCodeTooManyRequests)
+	}
+
+	user, err := as.userRepo.GetByEmail(context, email)
+	if err != nil {
+		return utils.NewError("Invalid email or password", utils.ErrorCodeUnauthorized)
+	}
+	token, err := utils.GenerateRandomString(16) // Tạo chuỗi ngẫu nhiên để làm token reset password
+	if err != nil {
+		return utils.WrapError(err, "Failed to generate reset password token", utils.ErrorCodeInternalServer)
+	}
+
+	err =as.cacheService.Set("reset:"+token,user.UserUuid, 1*time.Hour) // Lưu token vào cache với thời gian hết hạn 5 phút
+	if err != nil {
+		return utils.WrapError(err, "Failed to store forgot password", utils.ErrorCodeInternalServer)
+	}
+	err =as.cacheService.Set(rateLimitKey,"1", 5*time.Minute) // Lưu token vào cache với thời gian hết hạn 5 phút
+	if err != nil {
+		return utils.WrapError(err, "Failed to set rate limit key", utils.ErrorCodeInternalServer)
+	}
+	//view-to-reset-password là đường dẫn của frontend gửi đến để đặt lại mật khẩu
+	resetLink := fmt.Sprintf("http://abc.com/view-to-reset-password?token=%s", token) // Tạo link reset password
+	// link này sẽ được gửi đến email của người dùng
+	logger.Log.Info().Msg(resetLink) // Log link reset password
+
+
+	return nil
 }
