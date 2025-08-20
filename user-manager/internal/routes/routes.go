@@ -38,7 +38,6 @@ func RegisterRoutes(router *gin.Engine, authService auth.TokenService, cacheServ
 	protected.Use(middleware.AuthMiddleware())
 
 	for _, r := range routes {
-
 		switch r.(type) {
 		case *V1routes.AuthRoutes:
 			r.Register(v1api) // Routes KHÔNG cần authentication
