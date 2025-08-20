@@ -1,17 +1,29 @@
 package main
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 	"user-management-api/internal/app"
 	"user-management-api/internal/config"
+	"user-management-api/internal/utils"
+	"user-management-api/pkg/logger"
 
 	"github.com/joho/godotenv"
 )
 
 func main() {
-	loadEnv()
+	rootDir := mustGetWorkingDir()
+	logFile := filepath.Join(rootDir, "internal/logs/app.log")
+	logger.InitLogger(logger.LoggerConfig{
+		Level:      "info",
+		Filename:   logFile,
+		MaxSize:    1, // megabytes
+		MaxBackups: 5,
+		MaxAge:     5,    //
+		Compress:   true, // disabled by default
+		IsDev:      utils.GetEnv("APP_ENV", "development"),
+	})
+	loadEnv(filepath.Join(rootDir, ".env"))
 	// Initialize configuration
 	config := config.NewConfig()
 	// init application
@@ -22,17 +34,18 @@ func main() {
 		panic(err)
 	}
 }
-
-func loadEnv() {
+func mustGetWorkingDir() string {
 	dir, err := os.Getwd() // Lấy đường dẫn làm việc hiện tại
 	if err != nil {
-		log.Fatal("❌Unable to get working dir:", err)
+		logger.Log.Fatal().Err(err).Msg("❌ Unable to get working dir")
 	}
-	envPath := filepath.Join(dir, ".env") // Tạo đường dẫn đến file .env
-	err = godotenv.Load(envPath)          // Load environment variables from .env file
-	if err != nil {
-		log.Println("⚠️Error loading .env file")
+	return dir
+}
+func loadEnv(path string) {
+	if err := godotenv.Load(path); err != nil {
+		logger.Log.Warn().Msg("⚠️ No env file found")
+
 	} else {
-		log.Println("✅Loaded environment variables from .env file")
+		logger.Log.Info().Msg("✅ Loaded successfully env file: ")
 	}
 }

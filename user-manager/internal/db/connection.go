@@ -3,18 +3,18 @@ package db
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 	"user-management-api/internal/config"
 	"user-management-api/internal/db/sqlc"
 	"user-management-api/internal/utils"
+	"user-management-api/pkg/logger"
 	"user-management-api/pkg/pgx"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/tracelog"
 )
 
-var DB sqlc.Querier // đang sử dụng interface nên bỏ con trỏ
+var DB sqlc.Querier      // đang sử dụng interface nên bỏ con trỏ
 var DBpool *pgxpool.Pool // Khởi tạo biến toàn cục cho pool kết nối
 func InitDB() error {
 	connStr := config.NewConfig().DNS()
@@ -51,7 +51,7 @@ func InitDB() error {
 		return fmt.Errorf("failed to ping database: %v", err)
 	} // Kiểm tra kết nối đến cơ sở dữ liệu
 
-	log.Println("connected VXC")
+	logger.Log.Info().Msg("🍻 Connected to database successfully")
 	return nil
 
 }

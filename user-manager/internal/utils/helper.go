@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -32,9 +31,9 @@ func GetIntEnv(key string, defaultValue int) int {
 func NewLoggerWithPath(fileName string, level string) *zerolog.Logger {
 	dir, err := os.Getwd() // Lấy đường dẫn làm việc hiện tại
 	if err != nil {
-		log.Fatal("❌Unable to get working dir:", err)
+		logger.Log.Fatal().Err(err).Msg("❌Unable to get working dir")
 	}
-	path := filepath.Join(dir,"internal/logs",fileName) // Tạo đường dẫn đến file .env
+	path := filepath.Join(dir, "internal/logs", fileName) // Tạo đường dẫn đến file .env
 	config := logger.LoggerConfig{
 		Level:      level,
 		Filename:   path,

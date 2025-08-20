@@ -6,15 +6,21 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
+
 type contextKey string
+
 const (
 	TraceIDKey contextKey = "trace_id"
 )
+
+var Log *zerolog.Logger
+
 type LoggerConfig struct {
 	Level      string
 	Filename   string
@@ -25,6 +31,9 @@ type LoggerConfig struct {
 	IsDev      string
 }
 
+func InitLogger(config LoggerConfig) {
+	Log = NewLogger(config) // Tạo logger mới với cấu hình
+}
 func NewLogger(config LoggerConfig) *zerolog.Logger {
 	zerolog.TimeFieldFormat = time.RFC3339
 
@@ -36,9 +45,14 @@ func NewLogger(config LoggerConfig) *zerolog.Logger {
 	var writer io.Writer
 
 	if config.IsDev == "development" {
-		writer = &PrettyJSONWriter{
-			Writer: os.Stdout, // Ghi log ra console trong môi trường phát triển
+		if strings.Contains(config.Filename, "app.log") {
+			writer = zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339} // Ghi log ra console trong môi trường phát triển
+		} else {
+			writer = &PrettyJSONWriter{
+				Writer: os.Stdout, // Ghi log ra console trong môi trường phát triển
+			}
 		}
+
 	} else {
 		writer = &lumberjack.Logger{
 			Filename:   config.Filename,
@@ -68,7 +82,7 @@ func (w *PrettyJSONWriter) Write(p []byte) (n int, err error) {
 	return w.Writer.Write(prettyJSON.Bytes())
 }
 
-func GetTraceID (ctx context.Context) string{
+func GetTraceID(ctx context.Context) string {
 	if traceID, ok := ctx.Value(TraceIDKey).(string); ok {
 		return traceID
 	}

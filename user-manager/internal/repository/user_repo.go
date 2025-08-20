@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"log"
 	"user-management-api/internal/db"
 	"user-management-api/internal/db/sqlc"
 
@@ -55,9 +54,9 @@ func (ur *SqlUserRepository) GetAll(ctx context.Context, search, orderBy, sort s
 	return users, nil
 }
 
-func (ur *SqlUserRepository) CountUsers(ctx context.Context, search string,deleted bool) (int64, error) {
+func (ur *SqlUserRepository) CountUsers(ctx context.Context, search string, deleted bool) (int64, error) {
 	total, err := ur.db.CountUsers(ctx, sqlc.CountUsersParams{
-		Search: search,
+		Search:  search,
 		Deleted: &deleted,
 	})
 	if err != nil {
@@ -65,7 +64,7 @@ func (ur *SqlUserRepository) CountUsers(ctx context.Context, search string,delet
 	}
 	return total, nil
 }
-func (ur *SqlUserRepository) GetAllV2(ctx context.Context, search, orderBy, sort string, limit, offset int32,deleted bool) ([]sqlc.User, error) {
+func (ur *SqlUserRepository) GetAllV2(ctx context.Context, search, orderBy, sort string, limit, offset int32, deleted bool) ([]sqlc.User, error) {
 	query := `SELECT *
 	FROM users
 	WHERE (
@@ -92,7 +91,7 @@ func (ur *SqlUserRepository) GetAllV2(ctx context.Context, search, orderBy, sort
 		query += " ORDER BY user_created_at ASC"
 	}
 	query += " LIMIT $2 OFFSET $3"
-	rows,err := db.DBpool.Query(ctx, query, search,limit, offset)
+	rows, err := db.DBpool.Query(ctx, query, search, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -123,8 +122,8 @@ func (ur *SqlUserRepository) GetAllV2(ctx context.Context, search, orderBy, sort
 	return items, nil
 }
 func (ur *SqlUserRepository) Create(ctx context.Context, userParams sqlc.CreateUserParams) (sqlc.User, error) {
-	log.Printf("%+v", userParams) // %+v → in giá trị mặc định + tên trường (struct)
-	log.Printf("%+v", ur.db)      // in giá trị mặc định + tên trường (struct)
+	//log.Printf("%+v", userParams) // %+v → in giá trị mặc định + tên trường (struct)
+	//log.Printf("%+v", ur.db)      // in giá trị mặc định + tên trường (struct)
 	user, err := ur.db.CreateUser(ctx, userParams)
 	if err != nil {
 		return sqlc.User{}, err
@@ -132,7 +131,7 @@ func (ur *SqlUserRepository) Create(ctx context.Context, userParams sqlc.CreateU
 	return user, nil
 }
 func (ur *SqlUserRepository) GetByUuid(ctx context.Context, uuid uuid.UUID) (sqlc.User, error) {
-	user, err := ur.db.GetUser(ctx, uuid) 
+	user, err := ur.db.GetUser(ctx, uuid)
 	if err != nil {
 		return sqlc.User{}, err
 	}
@@ -173,7 +172,7 @@ func (ur *SqlUserRepository) Restore(ctx context.Context, uuid uuid.UUID) (sqlc.
 }
 func (ur *SqlUserRepository) GetByEmail(ctx context.Context, email string) (sqlc.User, error) {
 
-	user, err := ur.db.GetUserByEmail(ctx, email) 
+	user, err := ur.db.GetUserByEmail(ctx, email)
 	if err != nil {
 		return sqlc.User{}, err
 	}

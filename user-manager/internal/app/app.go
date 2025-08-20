@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -15,6 +14,7 @@ import (
 	"user-management-api/internal/validation"
 	"user-management-api/pkg/auth"
 	"user-management-api/pkg/cache"
+	"user-management-api/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -39,10 +39,10 @@ func NewApplication(cfg *config.Config) *Application {
 	r := gin.Default()
 
 	if err := validation.InitValidator(); err != nil {
-		log.Fatal("Failed to initialize validator:", err)
+		logger.Log.Fatal().Err(err).Msg("❌ Failed to initialize validator:")
 	}
 	if err := db.InitDB(); err != nil {
-		log.Fatal("Failed to connect to database:", err)
+		logger.Log.Fatal().Err(err).Msg("❌ Failed to connect to database:")
 	}
 	redisClient := config.NewRedisClient()
 	cacheService := cache.NewRedisCacheService(redisClient)
@@ -77,21 +77,20 @@ func (app *Application) Run() error {
 
 	// Chạy server trong một goroutine vì để tránh blocking
 	go func() {
-		log.Printf("❤️ Starting server on %s", app.config.ServerAddress)
+		logger.Log.Info().Msgf("❤️ Starting server on %s", app.config.ServerAddress)
 		if err := svr.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("ListenAndServe failed: %v", err)
+			logger.Log.Fatal().Err(err).Msg("❌ ListenAndServe failed:")
 		}
 	}()
 
 	<-quit // Chờ tín hiệu dừng
-	log.Println("Shutting down server...")
-
+	logger.Log.Info().Msg("🍺 Shutdow signal receiver")
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	if err := svr.Shutdown(ctx); err != nil {
-		log.Fatalf("✅Server forced to shutdown: %v", err)
+		logger.Log.Error().Err(err).Msg("⚠️ Server forced to shutdown:")
 	}
-	log.Println("🍺Server exiting gracefully")
+	logger.Log.Info().Msg("🍺 Server exiting gracefully")
 	return nil
 }
 

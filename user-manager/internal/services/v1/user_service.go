@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -12,6 +11,7 @@ import (
 	"user-management-api/internal/repository"
 	"user-management-api/internal/utils"
 	"user-management-api/pkg/cache"
+	"user-management-api/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -59,10 +59,10 @@ func (us *userService) GetAllUsers(ctx *gin.Context, search, orderBy, sort strin
 		Total int32       `json:"total"`
 	}
 	if err := us.cache.Get(cacheKey, &cacheData); err == nil && cacheData.Users != nil {
-		log.Println("🍻🍺Cache Redis GetAllUsers")
+		logger.Log.Info().Msg("🍻🍺Cache Redis GetAllUsers:")
 		return cacheData.Users, cacheData.Total, nil // Trả về dữ liệu từ cache nếu có
 	}
-	log.Println("🍻🍺Fetching from DB")
+	logger.Log.Info().Msg("🍻🍺Fetching from DB")
 	total, err := us.userRepo.CountUsers(context, search, deleted) // Đếm tổng số người dùng
 	if err != nil {
 		return []sqlc.User{}, 0, utils.WrapError(err, "failed to count users", utils.ErrorCodeInternalServer)
@@ -103,9 +103,9 @@ func (us *userService) CreateUser(ctx *gin.Context, input sqlc.CreateUserParams)
 		return sqlc.User{}, utils.WrapError(err, "failed to create user", utils.ErrorCodeInternalServer)
 	}
 	// Xóa cache liên quan đến người dùng để đảm bảo dữ liệu mới được cập nhật
-	 if err := us.cache.Clear("users:*"); err != nil {
-		log.Printf("Failed to clear cache for user creation: %v", err)
-	 } // Xóa cache liên quan đến người dùng
+	if err := us.cache.Clear("users:*"); err != nil {
+		logger.Log.Error().Err(err).Msg("Failed to clear cache for user creation")
+	} // Xóa cache liên quan đến người dùng
 	return user, nil
 }
 func (us *userService) GetUserByUUID(c *gin.Context, uuid uuid.UUID) (sqlc.User, error) {
@@ -176,7 +176,7 @@ func (us *userService) RestoreUser(ctx *gin.Context, uuid uuid.UUID) (sqlc.User,
 	return restoreUser, nil
 }
 
-func (us *userService) generateCacheKey( search, orderBy, sort string, limit, page int32, deleted bool) string{
+func (us *userService) generateCacheKey(search, orderBy, sort string, limit, page int32, deleted bool) string {
 	search = strings.TrimSpace(search) // Loại bỏ khoảng trắng ở đầu và cuối
 	if search == "" {
 		search = "none"
