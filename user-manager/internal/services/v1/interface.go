@@ -21,4 +21,5 @@ type AuthService interface {
 	Logout(c *gin.Context ,refreshTokenString string ) error
 	RefreshToken(c *gin.Context,refreshTokenString string) (string,string,int,error)
 	ForgotPassword(c *gin.Context,email string) error
+	ResetPassword(c *gin.Context,token,newPassword string) error
 }

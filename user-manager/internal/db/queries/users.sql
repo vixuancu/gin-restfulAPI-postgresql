@@ -62,6 +62,14 @@ WHERE
     AND user_deleted_at IS NOT NULL
 RETURNING *;
 
+-- name: UpdatePassword :one
+UPDATE users
+SET user_password = sqlc.arg(user_password)
+WHERE
+    user_uuid = sqlc.narg(user_uuid)::uuid
+    AND user_deleted_at IS NULL
+RETURNING *;
+
 -- name: CountUsers :one
 SELECT COUNT(*)
 FROM users

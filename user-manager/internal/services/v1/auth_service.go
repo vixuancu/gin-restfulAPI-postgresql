@@ -5,6 +5,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"user-management-api/internal/db/sqlc"
 	"user-management-api/internal/repository"
 	"user-management-api/internal/utils"
 	"user-management-api/pkg/auth"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/time/rate"
 )
@@ -224,5 +226,41 @@ func (as *authService) ForgotPassword(c *gin.Context, email string) error {
 	logger.Log.Info().Msg(resetLink) // Log link reset password
 
 
+	return nil
+}
+
+func (as *authService) ResetPassword(c *gin.Context, token, newPassword string) error {
+	context := c.Request.Context() // Lấy context của go từ gin.Context
+
+	var userUUIDStr string
+	err :=as.cacheService.Get("reset:"+token, &userUUIDStr) // Lấy userUUID từ cache bằng token
+	if err == redis.Nil || userUUIDStr == "" {
+		return utils.NewError("Invalid or expired reset token", utils.ErrorCodeNotFound)
+	}
+	if err != nil {
+		return utils.WrapError(err, "Failed to get user UUID from cache", utils.ErrorCodeInternalServer)
+	}
+	userUUID, err := uuid.Parse(userUUIDStr) // Chuyển đổi chuỗi UUID
+	if err != nil {
+		return utils.NewError("Invalid user UUID format", utils.ErrorCodeInternalServer)
+	}
+	hashedPassword,err:= bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost) // Mã hóa mật khẩu mới
+	if err != nil {
+		return utils.WrapError(err, "Failed to hash new password", utils.ErrorCodeInternalServer)
+	}
+	// Cập nhật mật khẩu mới cho người dùng
+	var input = sqlc.UpdatePasswordParams{
+		UserUuid:      userUUID,
+		UserPassword:string(hashedPassword) , // Chuyển đổi []byte sang string
+	}
+	_, err = as.userRepo.UpdatePassword(context, input);
+	if err != nil {
+		return utils.WrapError(err, "Failed to update password", utils.ErrorCodeInternalServer)
+	}
+	// Xóa token khỏi cache sau khi đặt lại mật khẩu thành công
+	err = as.cacheService.Clear("reset:" + token)
+	if err != nil {
+		return utils.WrapError(err, "Failed to clear reset token from cache", utils.ErrorCodeInternalServer)
+	}
 	return nil
 }
