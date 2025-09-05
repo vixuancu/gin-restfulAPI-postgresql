@@ -1,6 +1,7 @@
 package app
 
 import (
+	"user-management-api/internal/email"
 	v1handler "user-management-api/internal/handler/v1"
 	"user-management-api/internal/repository"
 	"user-management-api/internal/routes"
@@ -14,12 +15,12 @@ type AuthModule struct {
 	routes routes.Routes
 }
 
-func NewAuthModule(ctx *ModuleContext, tokenService auth.TokenService, cache cache.RedisCacheService) *AuthModule {
+func NewAuthModule(ctx *ModuleContext, tokenService auth.TokenService, cache cache.RedisCacheService, mailService email.EmailProviderService) *AuthModule {
 	// Initialize repository
 	userRepo := repository.NewSqlUserRepository(ctx.DB)
 
 	// Initialize service
-	authService := v1services.NewAuthService(userRepo,tokenService,cache)
+	authService := v1services.NewAuthService(userRepo,tokenService,cache,mailService)
 
 	// Initialize handler
 	authHandler := v1handler.NewAuthHandler(authService)

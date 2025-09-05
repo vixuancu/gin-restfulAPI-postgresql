@@ -31,7 +31,7 @@ type APIResponse struct {
 	Pagination any    `json:"pagination,omitempty"`
 }
 
-func (ae *AppError) Error() string {
+func (ae *AppError) Error() string { // Implement the error interface cho phép AppError có thể được sử dụng như một error
 	return ""
 }
 

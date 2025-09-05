@@ -1,0 +1,35 @@
+.
+├── bin
+├── cmd
+│   └── api
+├── internal
+│   ├── app
+│   ├── config
+│   ├── db
+│   │   ├── migrations
+│   │   ├── queries
+│   │   └── sqlc
+│   ├── dto
+│   │   └── v1
+│   ├── email
+│   ├── handler
+│   │   └── v1
+│   ├── logs
+│   ├── middleware
+│   ├── repository
+│   ├── routes
+│   │   └── v1
+│   ├── services
+│   │   └── v1
+│   ├── utils
+│   └── validation
+├── pkg
+│   ├── auth
+│   ├── cache
+│   ├── logger
+│   └── pgx
+├── system
+│   └── redis
+└── tmp
+
+32 directories

@@ -18,6 +18,8 @@ type DatabaseConfig struct {
 type Config struct {
 	ServerAddress string 
 	DB DatabaseConfig
+	MailProviderType   string
+	MailProviderConfig map[string]any
 }
 
 func NewConfig() *Config {

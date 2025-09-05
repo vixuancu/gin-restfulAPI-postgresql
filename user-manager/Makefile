@@ -39,7 +39,7 @@ migrate-up:
 # rollback the last migration (make migrate-down)
 migrate-down:
 	migrate -path $(MIGRATION_DIRS) -database "$(CONN_STRING)" down 1
-# rollback n versions
+# rollback n versions  (make migrate-down-n N=2)
 migrate-down-n:
 	migrate -path $(MIGRATION_DIRS) -database "$(CONN_STRING)" down $(N)
 # trở về phiên bản cụ thể (make migrate-force VERSION=1)
@@ -78,4 +78,7 @@ logs-prod:
 # Open bash in container golang-api
 bash:
 	docker exec -it golang-api /bin/sh
-.PHONY: importdb exportdb server start-container remove-container migrate-create migrate-up migrate-down migrate-force migrate-drop migrate-goto migrate-down-n sqlc build run-binary prod stop-prod logs-prod bash noapp stop-noapp dev stop-dev
+# cấu trúc dự án
+tree:
+	tree
+.PHONY: importdb exportdb server start-container remove-container migrate-create migrate-up migrate-down migrate-force migrate-drop migrate-goto migrate-down-n sqlc build run-binary prod stop-prod logs-prod bash noapp stop-noapp dev stop-dev tree

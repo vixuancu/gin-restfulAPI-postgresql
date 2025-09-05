@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 	"user-management-api/internal/db/sqlc"
+	"user-management-api/internal/email"
 	"user-management-api/internal/repository"
 	"user-management-api/internal/utils"
 	"user-management-api/pkg/auth"
@@ -23,6 +24,7 @@ type authService struct {
 	userRepo     repository.UserRepository
 	TokenService auth.TokenService
 	cacheService        cache.RedisCacheService
+	mailService email.EmailProviderService
 }
 type LoginAttempt struct {
 	Limiter  *rate.Limiter
@@ -36,11 +38,12 @@ var (
 	MaxLoginAttempts = 5                              // Số lần đăng nhập tối đa trong khoảng thời gian TTL
 )
 
-func NewAuthService(repo repository.UserRepository, TokenService auth.TokenService, cacheService cache.RedisCacheService) *authService {
+func NewAuthService(repo repository.UserRepository, TokenService auth.TokenService, cacheService cache.RedisCacheService,mailService email.EmailProviderService) AuthService {
 	return &authService{
 		userRepo:     repo,
 		TokenService: TokenService,
 		cacheService:        cacheService,
+		mailService: mailService,
 	}
 }
 

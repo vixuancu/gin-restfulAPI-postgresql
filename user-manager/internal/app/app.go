@@ -10,7 +10,9 @@ import (
 	"user-management-api/internal/config"
 	"user-management-api/internal/db"
 	"user-management-api/internal/db/sqlc"
+	"user-management-api/internal/email"
 	"user-management-api/internal/routes"
+	"user-management-api/internal/utils"
 	"user-management-api/internal/validation"
 	"user-management-api/pkg/auth"
 	"user-management-api/pkg/cache"
@@ -47,6 +49,16 @@ func NewApplication(cfg *config.Config) *Application {
 	redisClient := config.NewRedisClient()
 	cacheService := cache.NewRedisCacheService(redisClient)
 	tokenService := auth.NewJWTService(cacheService)
+
+	mailLogger := utils.NewLoggerWithPath("email.log","info")
+	factory, err := email.NewProviderFactory(email.ProviderMailtrap)
+	if err != nil {
+		mailLogger.Error().Err(err).Msg("❌ Failed to create email provider factory:")
+	}
+	mailService, err := email.NewMailService(cfg,mailLogger,factory)
+	if err != nil {
+		mailLogger.Error().Err(err).Msg("❌ Failed to create mail service:")
+	}
 	ctx := &ModuleContext{
 		DB:    db.DB,
 		Redis: redisClient,
@@ -54,7 +66,7 @@ func NewApplication(cfg *config.Config) *Application {
 
 	modules := []Module{
 		NewUserModule(ctx),
-		NewAuthModule(ctx, tokenService, cacheService),
+		NewAuthModule(ctx, tokenService, cacheService,mailService),
 	}
 	routes.RegisterRoutes(r, tokenService, cacheService, GetModuleRoutes(modules)...)
 	return &Application{
