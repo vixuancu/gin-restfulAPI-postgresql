@@ -6,12 +6,12 @@ import (
 	"sync"
 	"time"
 	"user-management-api/internal/db/sqlc"
-	"user-management-api/internal/email"
 	"user-management-api/internal/repository"
 	"user-management-api/internal/utils"
 	"user-management-api/pkg/auth"
 	"user-management-api/pkg/cache"
-	"user-management-api/pkg/logger"
+	"user-management-api/pkg/email"
+	emailpkg "user-management-api/pkg/email"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -23,8 +23,8 @@ import (
 type authService struct {
 	userRepo     repository.UserRepository
 	TokenService auth.TokenService
-	cacheService        cache.RedisCacheService
-	mailService email.EmailProviderService
+	cacheService cache.RedisCacheService
+	mailService  emailpkg.EmailProviderService
 }
 type LoginAttempt struct {
 	Limiter  *rate.Limiter
@@ -38,12 +38,12 @@ var (
 	MaxLoginAttempts = 5                              // Số lần đăng nhập tối đa trong khoảng thời gian TTL
 )
 
-func NewAuthService(repo repository.UserRepository, TokenService auth.TokenService, cacheService cache.RedisCacheService,mailService email.EmailProviderService) AuthService {
+func NewAuthService(repo repository.UserRepository, TokenService auth.TokenService, cacheService cache.RedisCacheService, mailService email.EmailProviderService) AuthService {
 	return &authService{
 		userRepo:     repo,
 		TokenService: TokenService,
-		cacheService:        cacheService,
-		mailService: mailService,
+		cacheService: cacheService,
+		mailService:  mailService,
 	}
 }
 
@@ -146,11 +146,11 @@ func (as *authService) Logout(c *gin.Context, refreshTokenString string) error {
 	}
 	// lấy jti từ claims
 	if jti, ok := claims["jti"].(string); ok {
-		expUnix, _ := claims["exp"].(float64) // Lấy thời gian hết hạn từ claims
-		exp := time.Unix(int64(expUnix), 0)   // Chuyển đổi sang thời gian
-		key := "blacklist:" + jti             // Tạo khóa blacklist
-		ttl := time.Until(exp)                // Tính thời gian hết hạn bằng thời gian còn lại của access token
-		as.cacheService.Set(key, "revoked", ttl)     // Lưu vào cache với thời gian hết hạn
+		expUnix, _ := claims["exp"].(float64)    // Lấy thời gian hết hạn từ claims
+		exp := time.Unix(int64(expUnix), 0)      // Chuyển đổi sang thời gian
+		key := "blacklist:" + jti                // Tạo khóa blacklist
+		ttl := time.Until(exp)                   // Tính thời gian hết hạn bằng thời gian còn lại của access token
+		as.cacheService.Set(key, "revoked", ttl) // Lưu vào cache với thời gian hết hạn
 	}
 
 	// Vô hiệu hóa refresh token
@@ -202,7 +202,7 @@ func (as *authService) ForgotPassword(c *gin.Context, email string) error {
 
 	rateLimitKey := fmt.Sprintf("reset:ratelimit:%s", email)
 
-	if exists,err := as.cacheService.Exists(rateLimitKey); err == nil && exists {
+	if exists, err := as.cacheService.Exists(rateLimitKey); err == nil && exists {
 		return utils.NewError("You have already requested a password reset. Please try again later.", utils.ErrorCodeTooManyRequests)
 	}
 
@@ -215,19 +215,28 @@ func (as *authService) ForgotPassword(c *gin.Context, email string) error {
 		return utils.WrapError(err, "Failed to generate reset password token", utils.ErrorCodeInternalServer)
 	}
 
-	err =as.cacheService.Set("reset:"+token,user.UserUuid, 1*time.Hour) // Lưu token vào cache với thời gian hết hạn 5 phút
+	err = as.cacheService.Set("reset:"+token, user.UserUuid, 1*time.Hour) // Lưu token vào cache với thời gian hết hạn 5 phút
 	if err != nil {
 		return utils.WrapError(err, "Failed to store forgot password", utils.ErrorCodeInternalServer)
 	}
-	err =as.cacheService.Set(rateLimitKey,"1", 5*time.Minute) // Lưu token vào cache với thời gian hết hạn 5 phút
+	err = as.cacheService.Set(rateLimitKey, "1", 5*time.Minute) // Lưu token vào cache với thời gian hết hạn 5 phút
 	if err != nil {
 		return utils.WrapError(err, "Failed to set rate limit key", utils.ErrorCodeInternalServer)
 	}
 	//view-to-reset-password là đường dẫn của frontend gửi đến để đặt lại mật khẩu
 	resetLink := fmt.Sprintf("http://abc.com/view-to-reset-password?token=%s", token) // Tạo link reset password
-	// link này sẽ được gửi đến email của người dùng
-	logger.Log.Info().Msg(resetLink) // Log link reset password
 
+	mailContent := &emailpkg.Email{
+		To: []emailpkg.Address{
+			{Email: email},
+		},
+		Subject:  "Password Reset Request",
+		Text:     fmt.Sprintf("Hi %s,\n\nTo reset your password, please click the following link: \n%s\n\n The Link will expire in 1 hour.\n\nIf you did not request a password reset, please ignore this email.\n\nBest regards,\nCode Team", user.UserEmail, resetLink),
+		Category: "password_reset",
+	}
+	if err := as.mailService.SendEmail(context, mailContent); err != nil {
+		return utils.NewError("Failed to send reset password email", utils.ErrorCodeInternalServer)
+	}
 
 	return nil
 }
@@ -236,7 +245,7 @@ func (as *authService) ResetPassword(c *gin.Context, token, newPassword string) 
 	context := c.Request.Context() // Lấy context của go từ gin.Context
 
 	var userUUIDStr string
-	err :=as.cacheService.Get("reset:"+token, &userUUIDStr) // Lấy userUUID từ cache bằng token
+	err := as.cacheService.Get("reset:"+token, &userUUIDStr) // Lấy userUUID từ cache bằng token
 	if err == redis.Nil || userUUIDStr == "" {
 		return utils.NewError("Invalid or expired reset token", utils.ErrorCodeNotFound)
 	}
@@ -247,16 +256,16 @@ func (as *authService) ResetPassword(c *gin.Context, token, newPassword string) 
 	if err != nil {
 		return utils.NewError("Invalid user UUID format", utils.ErrorCodeInternalServer)
 	}
-	hashedPassword,err:= bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost) // Mã hóa mật khẩu mới
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost) // Mã hóa mật khẩu mới
 	if err != nil {
 		return utils.WrapError(err, "Failed to hash new password", utils.ErrorCodeInternalServer)
 	}
 	// Cập nhật mật khẩu mới cho người dùng
 	var input = sqlc.UpdatePasswordParams{
-		UserUuid:      userUUID,
-		UserPassword:string(hashedPassword) , // Chuyển đổi []byte sang string
+		UserUuid:     userUUID,
+		UserPassword: string(hashedPassword), // Chuyển đổi []byte sang string
 	}
-	_, err = as.userRepo.UpdatePassword(context, input);
+	_, err = as.userRepo.UpdatePassword(context, input)
 	if err != nil {
 		return utils.WrapError(err, "Failed to update password", utils.ErrorCodeInternalServer)
 	}

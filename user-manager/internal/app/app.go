@@ -10,12 +10,12 @@ import (
 	"user-management-api/internal/config"
 	"user-management-api/internal/db"
 	"user-management-api/internal/db/sqlc"
-	"user-management-api/internal/email"
 	"user-management-api/internal/routes"
 	"user-management-api/internal/utils"
 	"user-management-api/internal/validation"
 	"user-management-api/pkg/auth"
 	"user-management-api/pkg/cache"
+	"user-management-api/pkg/email"
 	"user-management-api/pkg/logger"
 
 	"github.com/gin-gonic/gin"
@@ -50,12 +50,12 @@ func NewApplication(cfg *config.Config) *Application {
 	cacheService := cache.NewRedisCacheService(redisClient)
 	tokenService := auth.NewJWTService(cacheService)
 
-	mailLogger := utils.NewLoggerWithPath("email.log","info")
+	mailLogger := utils.NewLoggerWithPath("email.log", "info")
 	factory, err := email.NewProviderFactory(email.ProviderMailtrap)
 	if err != nil {
 		mailLogger.Error().Err(err).Msg("❌ Failed to create email provider factory:")
 	}
-	mailService, err := email.NewMailService(cfg,mailLogger,factory)
+	mailService, err := email.NewMailService(cfg, mailLogger, factory)
 	if err != nil {
 		mailLogger.Error().Err(err).Msg("❌ Failed to create mail service:")
 	}
@@ -66,7 +66,7 @@ func NewApplication(cfg *config.Config) *Application {
 
 	modules := []Module{
 		NewUserModule(ctx),
-		NewAuthModule(ctx, tokenService, cacheService,mailService),
+		NewAuthModule(ctx, tokenService, cacheService, mailService),
 	}
 	routes.RegisterRoutes(r, tokenService, cacheService, GetModuleRoutes(modules)...)
 	return &Application{

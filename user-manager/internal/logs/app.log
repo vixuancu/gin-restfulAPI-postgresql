@@ -1,2 +1,6 @@
 {"level":"info","time":"2025-08-21T08:31:45+07:00","message":"🍺 Shutdow signal receiver"}
 {"level":"info","time":"2025-08-21T08:31:45+07:00","message":"🍺 Server exiting gracefully"}
+{"level":"info","time":"2025-09-05T09:09:34Z","message":"✅ Loaded successfully env file: "}
+{"level":"info","time":"2025-09-05T09:09:34Z","message":"🍻 Connected to database successfully"}
+{"level":"info","time":"2025-09-05T09:09:34Z","message":"🍻🍺Connected to Redis successfully"}
+{"level":"info","time":"2025-09-05T09:09:34Z","message":"❤️ Starting server on :8080"}

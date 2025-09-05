@@ -1,7 +1,6 @@
 package app
 
 import (
-	"user-management-api/internal/email"
 	v1handler "user-management-api/internal/handler/v1"
 	"user-management-api/internal/repository"
 	"user-management-api/internal/routes"
@@ -9,6 +8,7 @@ import (
 	v1services "user-management-api/internal/services/v1"
 	"user-management-api/pkg/auth"
 	"user-management-api/pkg/cache"
+	"user-management-api/pkg/email"
 )
 
 type AuthModule struct {
@@ -20,7 +20,7 @@ func NewAuthModule(ctx *ModuleContext, tokenService auth.TokenService, cache cac
 	userRepo := repository.NewSqlUserRepository(ctx.DB)
 
 	// Initialize service
-	authService := v1services.NewAuthService(userRepo,tokenService,cache,mailService)
+	authService := v1services.NewAuthService(userRepo, tokenService, cache, mailService)
 
 	// Initialize handler
 	authHandler := v1handler.NewAuthHandler(authService)
