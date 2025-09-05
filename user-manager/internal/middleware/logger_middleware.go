@@ -33,6 +33,9 @@ func LoggerMiddleware(httpLogger *zerolog.Logger) gin.HandlerFunc {
 		contentType := c.GetHeader("Content-Type")
 		requestBody := make(map[string]any) //interface{} cũng thay thế any được
 		var formFiles []map[string]any
+		// Các trường nhạy cảm cần được làm mờ
+		var sensitiveFields = []string{"password", "new_password", "confirm_password", "current_password", "token", "access_token", "refresh_token", "secret", "api_key", "apikey", "auth", "authentication", "credentials"}
+
 		if strings.HasPrefix(contentType, "multipart/form-data") {
 			//multipart/form-data
 			if err := c.Request.ParseMultipartForm(32 << 20); err == nil && c.Request.MultipartForm != nil {
@@ -130,7 +133,7 @@ func LoggerMiddleware(httpLogger *zerolog.Logger) gin.HandlerFunc {
 			Str("request_uri", c.Request.RequestURI).                // Ghi toàn bộ URI của request (bao gồm query string)
 			Int64("content_length", c.Request.ContentLength).        // Ghi độ dài của nội dung request  (nếu có)
 			Interface("headers", c.Request.Header).                  // Ghi tất cả các header của request
-			Interface("request_body", requestBody).
+			Interface("request_body",senitizeRequestBody(requestBody,sensitiveFields)).
 			Interface("response_body", responseBodyParsed).
 			Int("status_code", statusCode).                // Ghi mã trạng thái HTTP của response (ví dụ: 200, 404, 500, v.v.)
 			Int64("duration_ms", duration.Milliseconds()). // Ghi thời gian xử lý request tính bằng mili giây
@@ -149,4 +152,41 @@ func formatFileSize(size int64) string {
 	} else {
 		return fmt.Sprintf("%.2f GB", float64(size)/(1024*1024*1024))
 	}
+}
+
+func senitizeRequestBody(data map[string]any, sensitiveFields []string) map[string]any {
+	senitized := make(map[string]any)
+
+	for key, value := range data {
+		lowerKey := strings.ToLower(key)
+		shouldMark := false
+		for _, field := range sensitiveFields {
+			if lowerKey == strings.ToLower(field) {
+				shouldMark = true
+				break
+			}
+		}
+		if shouldMark {
+			senitized[key] = "*****" // Thay thế giá trị nhạy cảm bằng "****"
+		}else {
+			// Kiểm tra nếu value là map[string]any thì đệ quy để làm mờ các trường nhạy cảm bên trong
+			switch v := value.(type) {
+			case map[string]any:
+				senitized[key] = senitizeRequestBody(v, sensitiveFields)
+			case []any:
+				var sanitizedArray []any
+				for _, item := range v {
+					if m, ok := item.(map[string]any); ok {
+					sanitizedArray = append(sanitizedArray, senitizeRequestBody(m, sensitiveFields))
+					}else {
+					sanitizedArray = append(sanitizedArray, item)	
+					}
+				}
+				senitized[key] = sanitizedArray
+			default:
+				senitized[key] = value
+			}
+		}
+	}
+	return senitized
 }
