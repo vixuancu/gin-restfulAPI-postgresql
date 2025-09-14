@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
@@ -81,7 +82,12 @@ func (w *PrettyJSONWriter) Write(p []byte) (n int, err error) {
 	}
 	return w.Writer.Write(prettyJSON.Bytes())
 }
-
+func WithTraceID(ctx context.Context, traceID string) context.Context {
+	if traceID == "" {
+		traceID = uuid.New().String()
+	}
+	return context.WithValue(ctx, TraceIDKey, traceID)
+}
 func GetTraceID(ctx context.Context) string {
 	if traceID, ok := ctx.Value(TraceIDKey).(string); ok {
 		return traceID

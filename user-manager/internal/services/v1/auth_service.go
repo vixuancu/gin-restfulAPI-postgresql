@@ -12,6 +12,8 @@ import (
 	"user-management-api/pkg/cache"
 	"user-management-api/pkg/email"
 	emailpkg "user-management-api/pkg/email"
+	"user-management-api/pkg/logger"
+	"user-management-api/pkg/rabbitmq"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -25,10 +27,15 @@ type authService struct {
 	TokenService auth.TokenService
 	cacheService cache.RedisCacheService
 	mailService  emailpkg.EmailProviderService
+	rabbitmq rabbitmq.RabbitMQService
 }
 type LoginAttempt struct {
 	Limiter  *rate.Limiter
 	Lastseen time.Time
+}
+type EmailPayload struct {
+    TraceID  string       `json:"trace_id"`
+    Email    *email.Email `json:"email"`
 }
 
 var (
@@ -38,12 +45,13 @@ var (
 	MaxLoginAttempts = 5                              // Số lần đăng nhập tối đa trong khoảng thời gian TTL
 )
 
-func NewAuthService(repo repository.UserRepository, TokenService auth.TokenService, cacheService cache.RedisCacheService, mailService email.EmailProviderService) AuthService {
+func NewAuthService(repo repository.UserRepository, TokenService auth.TokenService, cacheService cache.RedisCacheService, mailService email.EmailProviderService,rabbitmqService rabbitmq.RabbitMQService) AuthService {
 	return &authService{
 		userRepo:     repo,
 		TokenService: TokenService,
 		cacheService: cacheService,
 		mailService:  mailService,
+		rabbitmq: rabbitmqService,
 	}
 }
 
@@ -199,7 +207,8 @@ func (as *authService) RefreshToken(c *gin.Context, refreshTokenString string) (
 
 func (as *authService) ForgotPassword(c *gin.Context, email string) error {
 	context := c.Request.Context() // Lấy context của go từ gin.Context
-
+	// Lấy trace_id từ request
+    traceID := logger.GetTraceID(context)
 	rateLimitKey := fmt.Sprintf("reset:ratelimit:%s", email)
 
 	if exists, err := as.cacheService.Exists(rateLimitKey); err == nil && exists {
@@ -234,9 +243,15 @@ func (as *authService) ForgotPassword(c *gin.Context, email string) error {
 		Text:     fmt.Sprintf("Hi %s,\n\nTo reset your password, please click the following link: \n%s\n\n The Link will expire in 1 hour.\n\nIf you did not request a password reset, please ignore this email.\n\nBest regards,\nCode Team", user.UserEmail, resetLink),
 		Category: "password_reset",
 	}
-	if err := as.mailService.SendEmail(context, mailContent); err != nil {
-		return utils.NewError("Failed to send reset password email", utils.ErrorCodeInternalServer)
+
+	// Cần update thành publish vào rabbitmq
+	payloadEmail := EmailPayload{
+		TraceID: traceID,
+		Email:   mailContent,
 	}
+	if err := as.rabbitmq.Puclish(context,"auth_email_queue",payloadEmail); err != nil {
+		return utils.NewError("Failed to send password reset email", utils.ErrorCodeInternalServer)
+	} 
 
 	return nil
 }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"os"
 	"path/filepath"
 	"user-management-api/internal/app"
 	"user-management-api/internal/config"
@@ -12,7 +11,7 @@ import (
 )
 
 func main() {
-	rootDir := mustGetWorkingDir()
+	rootDir := utils.MustGetWorkingDir()
 	logFile := filepath.Join(rootDir, "internal/logs/app.log")
 	logger.InitLogger(logger.LoggerConfig{
 		Level:      "info",
@@ -23,29 +22,23 @@ func main() {
 		Compress:   true, // disabled by default
 		IsDev:      utils.GetEnv("APP_ENV", "development"),
 	})
-	loadEnv(filepath.Join(rootDir, ".env"))
-	// Initialize configuration
-	config := config.NewConfig()
-	// init application
-	application := app.NewApplication(config)
 
-	// start server
-	if err := application.Run(); err != nil {
-		panic(err)
-	}
-}
-func mustGetWorkingDir() string {
-	dir, err := os.Getwd() // Lấy đường dẫn làm việc hiện tại
-	if err != nil {
-		logger.Log.Fatal().Err(err).Msg("❌ Unable to get working dir")
-	}
-	return dir
-}
-func loadEnv(path string) {
-	if err := godotenv.Load(path); err != nil {
+	if err := godotenv.Load(filepath.Join(rootDir, ".env")); err != nil {
 		logger.Log.Warn().Msg("⚠️ No env file found")
 
 	} else {
-		logger.Log.Info().Msg("✅ Loaded successfully env file: ")
+		logger.Log.Info().Msg("✅ Loaded successfully env in api file: ")
+	}
+	// Initialize configuration
+	config := config.NewConfig()
+	// init application
+	application,err := app.NewApplication(config)
+	if err != nil {
+		logger.Log.Fatal().Err(err).Msg("❌ Unable to initialize application")
+	}
+	// start server
+	if err := application.Run(); err != nil {
+		logger.Log.Fatal().Err(err).Msg("❌ Unable to start server")
 	}
 }
+

@@ -17,6 +17,7 @@ import (
 	"user-management-api/pkg/cache"
 	"user-management-api/pkg/email"
 	"user-management-api/pkg/logger"
+	"user-management-api/pkg/rabbitmq"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -36,29 +37,39 @@ type ModuleContext struct {
 	Redis *redis.Client
 }
 
-func NewApplication(cfg *config.Config) *Application {
+func NewApplication(cfg *config.Config) (*Application, error) {
 
 	r := gin.Default()
 
 	if err := validation.InitValidator(); err != nil {
 		logger.Log.Fatal().Err(err).Msg("❌ Failed to initialize validator:")
+		return nil, err
 	}
 	if err := db.InitDB(); err != nil {
 		logger.Log.Fatal().Err(err).Msg("❌ Failed to connect to database:")
+		return nil, err
 	}
 	redisClient := config.NewRedisClient()
 	cacheService := cache.NewRedisCacheService(redisClient)
 	tokenService := auth.NewJWTService(cacheService)
 
+
+	// Init mail service
 	mailLogger := utils.NewLoggerWithPath("email.log", "info")
 	factory, err := email.NewProviderFactory(email.ProviderMailtrap)
 	if err != nil {
 		mailLogger.Error().Err(err).Msg("❌ Failed to create email provider factory:")
+		return nil, err
 	}
 	mailService, err := email.NewMailService(cfg, mailLogger, factory)
 	if err != nil {
 		mailLogger.Error().Err(err).Msg("❌ Failed to create mail service:")
+		return nil, err
 	}
+
+	rabbitmqLogger := utils.NewLoggerWithPath("worker.log", "info")
+	rabbitmqService,_:= rabbitmq.NewRabbitMQService(utils.GetEnv("RABBITMQ_URL","amqp://guest:guest@rabbitmq:5672/"),rabbitmqLogger)
+
 	ctx := &ModuleContext{
 		DB:    db.DB,
 		Redis: redisClient,
@@ -66,14 +77,14 @@ func NewApplication(cfg *config.Config) *Application {
 
 	modules := []Module{
 		NewUserModule(ctx),
-		NewAuthModule(ctx, tokenService, cacheService, mailService),
+		NewAuthModule(ctx, tokenService, cacheService, mailService,rabbitmqService),
 	}
 	routes.RegisterRoutes(r, tokenService, cacheService, GetModuleRoutes(modules)...)
 	return &Application{
 		config:  cfg,
 		router:  r,
 		modules: modules,
-	}
+	}, nil
 }
 func (app *Application) Run() error {
 	// if err := app.router.Run(app.config.ServerAddress); err != nil {

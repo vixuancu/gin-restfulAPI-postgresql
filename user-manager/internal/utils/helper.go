@@ -55,3 +55,11 @@ func GenerateRandomString(length int) (string, error) {
 	} // Sinh nonce ngẫu nhiên
 	return base64.URLEncoding.EncodeToString(bytes), nil // Trả về chuỗi base64 của dữ liệu đã mã hóa
 }
+
+func MustGetWorkingDir() string {
+	dir, err := os.Getwd() // Lấy đường dẫn làm việc hiện tại
+	if err != nil {
+		logger.Log.Fatal().Err(err).Msg("❌ Unable to get working dir")
+	}
+	return dir
+}
